@@ -1,7 +1,9 @@
 
-system("cd tb && make");
+print "running make...\n";
+system "cd tb && make";
 @files = split /\n/, `ls tb | grep "\.exe"`;
 
+print "running tests...\n";
 for (@files) {
     $output = `tb/$_` ;
 

@@ -6,7 +6,7 @@ module cpu_tb;
     cpu cpu_comp(.CLK(CLK));
 
     initial begin
-        for (i=0; i<100; ++i) begin
+        for (i=0; i<256; ++i) begin
             CLK = ~CLK; #20;
         end
     end
