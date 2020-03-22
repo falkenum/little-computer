@@ -1,11 +1,11 @@
 SOURCES := $(wildcard *_tb.v)
-FILES := $(SOURCES:.v=.exe)
+EXECUTABLES := $(SOURCES:.v=.exe)
 TB_SUFFIX := _tb
 
-all: $(FILES)
+all: $(EXECUTABLES)
 
 %$(TB_SUFFIX).exe: %$(TB_SUFFIX).v
-	iverilog -g2012 -o $@ -I ../h/ ../v/* $^
+	iverilog -g2012 -o $@ -I ../h/ ../sv/*.sv $^
 
 clean:
 	rm *.exe

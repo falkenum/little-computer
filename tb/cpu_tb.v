@@ -6,10 +6,8 @@ module cpu_tb;
     cpu cpu_comp(.CLK(CLK));
 
     initial begin
-        $display("beginning test");
         for (i=0; i<100; ++i) begin
             CLK = ~CLK; #20;
         end
     end
-
 endmodule
