@@ -7,8 +7,9 @@ module cpu_tb;
     wire halted;
     wire [`RegWidth-1:0] reg_state [`NumRegs];
     wire [`RegWidth-1:0] pc;
+    wire [`InstrWidth-1:0] instr;
 
-    cpu cpu_comp(CLK, halted, reg_state, pc);
+    cpu cpu_comp(CLK, halted, reg_state, pc, instr);
 
     initial begin
         cpu_comp.load_instr("as/halt.mem", 1); #10;

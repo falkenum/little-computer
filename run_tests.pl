@@ -7,9 +7,13 @@ if ($ret_val) {
 @files = split /\n/, `ls tb | grep "\.exe"`;
 print "running tests...\n";
 for (@files) {
+    print $_ . ': ';
     $output = `tb/$_` ;
 
     if (length $output > 0) {
-        print $_ . ': ' . $output;
+         print $output;
+    }
+    else {
+        print "\n";
     }
 }

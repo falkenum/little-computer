@@ -4,10 +4,10 @@ module cpu (
     input CLK,
     output halted,
     output [`RegWidth-1:0] reg_state [`NumRegs],
-    output reg [`RegWidth-1:0] pc
+    output reg [`RegWidth-1:0] pc,
+    output [`InstrWidth-1:0] instr
 );
     reg [`InstrWidth-1:0] instr_mem [`InstrMemLen-1:0];
-    wire [`InstrWidth-1:0] instr;
     wire reg_write_en, itype;
     wire [`AluOpWidth-1:0] alu_op;
 
@@ -44,4 +44,8 @@ module cpu (
         pc = 0;
         $readmemh(instr_path, instr_mem, 0, num_instr-1);
     endtask
+
+    // always @(*) begin
+    //     #1; $display("instruction: %x; halted: %b", instr, halted);
+    // end
 endmodule
