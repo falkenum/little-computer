@@ -33,19 +33,8 @@ module cpu (
         pc = halted ? pc : pc + 1;
     end
 
-    initial begin
-        integer i;
-        for (i = 0; i < 1 << `RegWidth; i++) begin
-            instr_mem[i] <= 0;
-        end
-    end
-
     task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
         pc = 0;
         $readmemh(instr_path, instr_mem, 0, num_instr-1);
     endtask
-
-    // always @(*) begin
-    //     #1; $display("instruction: %x; halted: %b", instr, halted);
-    // end
 endmodule
