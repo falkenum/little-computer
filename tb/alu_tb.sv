@@ -18,5 +18,10 @@ module alu_tb;
         `assert_eq(rd, 'h10);
         rt = 0; #10;
         `assert_eq(rd, 'h2);
+
+        op = `ALU_OP_AND; #10;
+        `assert_eq(rd, 0);
+        op = `ALU_OP_NOT; #10;
+        `assert_eq(rd, ~(16'd2));
     end
 endmodule

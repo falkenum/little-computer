@@ -39,6 +39,15 @@ module cpu_tb;
         `assert_eq(halted, 1);
         `assert_eq(pc, 3);
         `assert_eq(reg_state[0], 2);
+
+        cpu_comp.load_instr("as/arith.mem", 8); #10;
+        $display("r1: %b", reg_state[1]);
+        while (halted === 0) begin
+            CLK = 1; #10;
+            CLK = 0; #10;
+            $display("r1: %b", reg_state[1]);
+        end
+        `assert_eq(reg_state[1], -16'sd9);
     end
 endmodule
 
