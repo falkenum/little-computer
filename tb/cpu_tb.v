@@ -13,7 +13,7 @@ module cpu_tb;
 	cpu cpu_comp(CLK, halted, reg_state, pc);
 
     initial begin
-		cpu_comp.load_instr("mem/halt.mem", 1); #10;
+		cpu_comp.load_instr("as/halt.mem", 1); #10;
 		`assert_eq(pc, 0);
 		`assert_eq(halted, 1);
 		CLK = 1; #10;
@@ -21,7 +21,7 @@ module cpu_tb;
 		`assert_eq(pc, 0);
 		`assert_eq(halted, 1);
 
-		cpu_comp.load_instr("mem/add.mem", 4); #10;
+		cpu_comp.load_instr("as/add.mem", 4); #10;
 		`assert_eq(pc, 0);
 		`assert_eq(halted, 0);
 		`assert_eq(reg_state[0],0);
@@ -40,15 +40,6 @@ module cpu_tb;
 		`assert_eq(halted, 1);
 		`assert_eq(pc, 3);
 		`assert_eq(reg_state[0], 2);
-	   
-	   	   
-        while (!halted) begin
-            CLK = 1; #10;
-            CLK = 0; #10;
-			// $display("pc: %x", pc);
-			// for (reg_num = 0; reg_num < `NumRegs; reg_num++)
-			// 	$display("reg %d: %x", reg_num, reg_state[reg_num]);
-        end
     end
 endmodule
 
