@@ -9,11 +9,8 @@ module registers(
     input clk,
     output [`RegWidth-1:0] rs_val,
     output [`RegWidth-1:0] rt_val,
-    output [`RegWidth-1:0] debug_reg_state [`NumRegs]
+    output reg [`RegWidth-1:0] reg_file [`NumRegs]
 );
-    reg [`RegWidth-1:0] reg_file [`NumRegs];
-
-    assign debug_reg_state = reg_file;
     assign rs_val = reg_file[rs];
     assign rt_val = reg_file[rt];
 
@@ -25,5 +22,9 @@ module registers(
 
     always @(posedge clk) begin
         if (write_en) reg_file[rd] = reg_in;
+		// $display("write_en: %b", write_en);
+		// $display(reg_in);
+		// $display(rd);
+	   
     end
 endmodule

@@ -11,10 +11,10 @@ module control_tb;
 
     initial begin
 		instr = {`OP_HALT, 12'b0};
-		`assert(halted);
-		`assert(!reg_write_en);
+		`assert_eq(halted, 1);
+		`assert_eq(reg_write_en, 0);
 		instr = {`OP_ADD, 12'b0};
-		`assert(!halted);
-		`assert(reg_write_en);
+		`assert_eq(halted, 0);
+		`assert_eq(reg_write_en, 1);
     end
 endmodule
