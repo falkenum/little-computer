@@ -1,4 +1,4 @@
-`include "defs.h"
+`include "defs.svh"
 
 module alu(
     input [`AluOpWidth-1:0] op,

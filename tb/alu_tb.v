@@ -1,4 +1,4 @@
-`include "defs.h"
+`include "defs.svh"
 
 `timescale 1 ns / 1 ps
 module alu_tb;
