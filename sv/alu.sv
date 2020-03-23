@@ -1,16 +1,19 @@
-`include "defs.svh"
+`include "defs.vh"
 
 module alu(
     input [`AluOpWidth-1:0] op,
-    input [`RegWidth-1:0] reg1,
-    input [`RegWidth-1:0] reg2,
-    output logic [`RegWidth-1:0] regOut
+    input [`RegWidth-1:0] rs,
+    input [`RegWidth-1:0] rt,
+    output logic [`RegWidth-1:0] rd
 );
 
     always @*
     case (op)
-        `ALU_OP_ADD: regOut <= reg1 + reg2;
-        `ALU_OP_SL: regOut <= reg1 << reg2;
+        `ALU_OP_ADD: rd <= rs + rt;
+        `ALU_OP_LSL: rd <= rs << rt;
+        `ALU_OP_AND: rd <= rs & rt;
+        `ALU_OP_NOT: rd <= ~rs;
+        default: rd <= 0;
     endcase
 
 endmodule

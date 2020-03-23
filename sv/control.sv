@@ -1,4 +1,4 @@
-`include "defs.svh"
+`include "defs.vh"
 
 module control(
     input [`InstrWidth-1:0] instr,
@@ -15,5 +15,5 @@ module control(
     assign reg_write_en = op[`OpWidth-1] == 'b0;
     assign alu_op = op[`OpWidth-3:`OpWidth-4];
 
-	// always@(op) $display("op: %x", op);
+    // always@(op) $display("op: %x", op);
 endmodule

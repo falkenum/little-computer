@@ -1,11 +1,10 @@
-`include "defs.svh"
-
+`include "defs.vh"
 
 module cpu (
     input CLK,
     output halted,
     output [`RegWidth-1:0] reg_state [`NumRegs],
-	output reg [`RegWidth-1:0] pc
+    output reg [`RegWidth-1:0] pc
 );
     reg [`InstrWidth-1:0] instr_mem [`InstrMemLen-1:0];
     wire [`InstrWidth-1:0] instr;
@@ -20,11 +19,11 @@ module cpu (
     wire [`RegWidth-1:0] rt_val;
     wire [`ImmWidth-1:0] imm;
 
-	assign instr = instr_mem[pc];
+    assign instr = instr_mem[pc];
     assign rs = instr[3*`NumRegsWidth-1:2*`NumRegsWidth];
     assign rt = instr[2*`NumRegsWidth-1:`NumRegsWidth];
     assign rd = instr[`NumRegsWidth-1:0];
-	assign imm = {rs[`NumRegsWidth-1] ? 3'b111 : 3'b0, rs};
+    assign imm = {rs[`NumRegsWidth-1] ? 3'b111 : 3'b0, rs};
 
     control control_comp(instr, halted, reg_write_en, itype, alu_op);
     registers registers_comp(rs, rt, rd, reg_in, reg_write_en, CLK, rs_val, rt_val, reg_state);
@@ -34,8 +33,15 @@ module cpu (
         pc = halted ? pc : pc + 1;
     end
 
-	task load_instr(input string instr_path, input integer num_instr);
-		pc = 0;
-		$readmemh(instr_path, instr_mem, 0, num_instr-1);
-	endtask
+    initial begin
+        integer i;
+        for (i = 0; i < 1 << `RegWidth; i++) begin
+            instr_mem[i] <= 0;
+        end
+    end
+
+    task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
+        pc = 0;
+        $readmemh(instr_path, instr_mem, 0, num_instr-1);
+    endtask
 endmodule

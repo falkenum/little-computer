@@ -1,4 +1,4 @@
-`include "defs.svh"
+`include "defs.vh"
 
 module registers(
     input [`NumRegsWidth-1:0] rs, 
@@ -22,9 +22,5 @@ module registers(
 
     always @(posedge clk) begin
         if (write_en) reg_file[rd] = reg_in;
-		// $display("write_en: %b", write_en);
-		// $display(reg_in);
-		// $display(rd);
-	   
     end
 endmodule
