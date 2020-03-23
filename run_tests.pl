@@ -1,13 +1,7 @@
-
-if ($ARGV[0] eq "clean") {
-    print "cleaning...\n";
-    system "cd tb && make clean";
-}
-
 print "running make...\n";
-$ret_val = system "cd tb && make";
+$ret_val = system "make";
 if ($ret_val) {
-    exit ret_val;
+    exit $ret_val;
 }
 
 @files = split /\n/, `ls tb | grep "\.exe"`;
