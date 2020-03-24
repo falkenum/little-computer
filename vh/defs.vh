@@ -16,6 +16,10 @@
 `define OP_NOT 4'h3
 
 `define OP_ADDI 4'h4
+`define OP_BEQ 4'h5
+`define OP_LW 4'h6
+`define OP_SW 4'h7
+
 `define OP_HALT 4'hE
 `define OP_NOP 4'hF
 

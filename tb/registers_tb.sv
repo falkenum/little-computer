@@ -2,17 +2,14 @@
 
 `timescale 1 ns / 1 ps
 module registers_tb;
-    reg [`NumRegsWidth-1:0] rs = 0; 
-    reg [`NumRegsWidth-1:0] rt = 0; 
-    reg [`NumRegsWidth-1:0] rd = 0; 
+    reg [`NumRegsWidth-1:0] rs = 0, rt = 0, rd = 0; 
     reg [`RegWidth-1:0] reg_in = 0;
     reg reg_write_en = 0;
     reg CLK = 0;
-    wire [`RegWidth-1:0] rs_val;
-    wire [`RegWidth-1:0] rt_val;
+    wire [`RegWidth-1:0] rs_val, rt_val, rd_val;
     wire [`RegWidth-1:0] reg_state [`NumRegs];
 
-    registers registers_comp(rs, rt, rd, reg_in, reg_write_en, CLK, rs_val, rt_val, reg_state);
+    registers registers_comp(rs, rt, rd, reg_in, reg_write_en, CLK, rs_val, rt_val, rd_val, reg_state);
 
     initial begin
         static integer i = 0; #1;
