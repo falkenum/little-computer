@@ -32,8 +32,9 @@ def get_machine_code(instr_str):
     # if it is itype
     if op_str in itypes:
         assert(instr_split[inst_i][0] != 'r')
-        assert(int(instr_split[1]) < (1 << 6))
         first_arg = int(instr_split[1])
+        assert(first_arg < 32 and first_arg >= -32)
+        first_arg = first_arg & 0x3f
     else:
         assert(op_str in rtypes | utypes)
         # else it's a register
@@ -41,7 +42,7 @@ def get_machine_code(instr_str):
         first_arg = int(instr_split[inst_i][1:])
         assert(first_arg < 8)
 
-    instr += first_arg << 6
+    instr |= first_arg << 6
     inst_i += 1
 
     # if it's a three arg instruction
@@ -55,7 +56,7 @@ def get_machine_code(instr_str):
     assert(instr_split[inst_i][0] == 'r')
     third_arg = int(instr_split[inst_i][1:]) 
     assert(third_arg < 8)
-    instr += third_arg
+    instr |= third_arg
     return instr
 
 

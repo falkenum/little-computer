@@ -17,19 +17,23 @@ module cpu (
     wire [`RegWidth-1:0] reg_in;
     wire [`RegWidth-1:0] rs_val;
     wire [`RegWidth-1:0] rt_val;
+    wire [`RegWidth-1:0] imm_extended;
     wire [`ImmWidth-1:0] imm;
 
     assign instr = instr_mem[pc];
     assign rs = instr[3*`NumRegsWidth-1:2*`NumRegsWidth];
     assign rt = instr[2*`NumRegsWidth-1:`NumRegsWidth];
     assign rd = instr[`NumRegsWidth-1:0];
-    assign imm = {rs[`NumRegsWidth-1] ? 3'b111 : 3'b0, rs};
+
+    assign imm = instr[(`InstrWidth-`OpWidth-1):2*`NumRegsWidth];
+    assign imm_extended = {imm[`ImmWidth-1] ? ~10'b0 : 10'b0, imm};
 
     control control_comp(instr, halted, reg_write_en, itype, alu_op);
     registers registers_comp(rs, rt, rd, reg_in, reg_write_en, CLK, rs_val, rt_val, reg_state);
-    alu alu_comp(alu_op, itype ? imm : rs_val, rt_val, reg_in);
+    alu alu_comp(alu_op, itype ? imm_extended : rs_val, rt_val, reg_in);
     
     always @(posedge CLK) begin
+        // $display("imm: %b; extended: %b; instr: %b", imm, imm_extended, instr);
         pc = halted ? pc : pc + 1;
     end
 
