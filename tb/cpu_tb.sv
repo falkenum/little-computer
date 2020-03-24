@@ -44,7 +44,6 @@ module cpu_tb;
         CLK = 0; #10;
         `assert_eq(halted, 1);
         `assert_eq(reg_state[1], 1);
-        // $display(reg_state[1]);
 
         cpu_comp.load_instr("as/arith.mem", 10); #10;
         // $display("pc: %x; instr: %x; r1: %b; r2: %b; r3: %b", 
@@ -54,6 +53,14 @@ module cpu_tb;
             CLK = 0; #10;
         end
         `assert_eq(reg_state[1], -16'sd9);
+
+        cpu_comp.load_instr("as/labels.mem", 4); #10;
+        while (halted === 0) begin
+            CLK = 1; #10;
+            CLK = 0; #10;
+        end
+        `assert_eq(reg_state[2], 1);
+        `assert_eq(reg_state[3], 3);
     end
 endmodule
 

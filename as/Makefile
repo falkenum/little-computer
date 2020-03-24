@@ -1,4 +1,4 @@
-MEMSOURCES=$(wildcard *.as)
+MEMSOURCES=$(wildcard *.as) ../as.py
 MEMFILES=$(MEMSOURCES:.as=.mem)
 
 all: $(MEMFILES)
