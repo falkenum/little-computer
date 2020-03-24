@@ -52,6 +52,13 @@ def get_machine_code(instr_str, pc, labels):
         # assert that it's 6 bits
         assert(first_arg >= -32 and first_arg < 32)
         first_arg &= 0x3f
+    elif op_str == "j":
+        try:
+            first_arg = int(first_arg)
+        except ValueError:
+            assert (first_arg in labels)
+            first_arg = int(labels[first_arg])
+        assert(first_arg >= 0 and first_arg < 1 << 12)
     else:
         assert(op_str in rtypes | utypes)
         # else it's a register
@@ -70,10 +77,11 @@ def get_machine_code(instr_str, pc, labels):
         instr += second_arg << 3
         inst_i += 1
     
-    assert(instr_split[inst_i][0] == 'r')
-    third_arg = int(instr_split[inst_i][1:]) 
-    assert(third_arg < 8)
-    instr |= third_arg
+    if op_str in rtypes | itypes | utypes:
+        assert(instr_split[inst_i][0] == 'r')
+        third_arg = int(instr_split[inst_i][1:]) 
+        assert(third_arg < 8)
+        instr |= third_arg
     return instr
 
 def strip_comment(line):

@@ -3,6 +3,7 @@
 module control(
     input [`InstrWidth-1:0] instr,
     output halted,
+    output jtype,
     output reg_write_en,
     output alu_use_imm,
     output is_beq,
@@ -14,6 +15,7 @@ module control(
     
     assign is_beq = op == `OP_BEQ;
     assign halted = op == `OP_HALT;
+    assign jtype = op == `OP_J;
     assign itype = op[`OpWidth-1:`OpWidth-2] == 'b01;
     assign alu_use_imm = itype & op != `OP_BEQ;
     assign reg_write_en = op[`OpWidth-1:`OpWidth-2] == 'b00 | op == `OP_ADDI | op == `OP_LW;

@@ -4,12 +4,13 @@
 module control_tb;
     reg [`InstrWidth-1:0] instr;
     wire halted;
+    wire jtype;
     wire reg_write_en;
     wire alu_use_imm;
     wire is_beq;
     wire [`AluOpWidth-1:0] alu_op;
    
-    control control_comp(instr, halted, reg_write_en, alu_use_imm, is_beq, alu_op);
+    control control_comp(instr, halted, jtype, reg_write_en, alu_use_imm, is_beq, alu_op);
 
     initial begin
         instr = {`OP_HALT, 12'b0}; #10;

@@ -7,6 +7,7 @@
 `define NumRegs (1 << `NumRegsWidth)
 `define InstrWidth 16
 `define ImmWidth 6
+`define JImmWidth 12
 `define InstrMemLen (1 << `RegWidth)
 `define OpWidth 4
 
@@ -19,6 +20,7 @@
 `define OP_BEQ 4'h5
 `define OP_LW 4'h6
 `define OP_SW 4'h7
+`define OP_J 4'h8
 
 `define OP_HALT 4'hE
 `define OP_NOP 4'hF
