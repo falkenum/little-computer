@@ -10,6 +10,12 @@ op_to_code = {
     'halt': 0b1110,
     'nop': 0b1111
 }
+ktypes = {"halt", "nop"}
+itypes = {"addi"}
+rtypes = {"add", "lsl", "and"}
+utypes = {"not"}
+
+assert (ktypes | itypes | rtypes | utypes == op_to_code.keys())
 
 def get_machine_code(instr_str):
     instr_split = instr_str.split()
@@ -18,17 +24,20 @@ def get_machine_code(instr_str):
     opcode = op_to_code[op_str]
     instr = opcode << 12
 
-    if op_str in {"halt", "nop"}:
+    if op_str in ktypes:
         return instr 
         
     inst_i = 1
     first_arg = 0
     # if it is itype
-    if instr_split[inst_i][0] != 'r':
+    if op_str in itypes:
+        assert(instr_split[inst_i][0] != 'r')
         assert(int(instr_split[1]) < (1 << 6))
         first_arg = int(instr_split[1])
     else:
+        assert(op_str in rtypes | utypes)
         # else it's a register
+        assert(instr_split[inst_i][0] == 'r')
         first_arg = int(instr_split[inst_i][1:])
         assert(first_arg < 8)
 
@@ -36,14 +45,13 @@ def get_machine_code(instr_str):
     inst_i += 1
 
     # if it's a three arg instruction
-    if op_str not in {"not"}:
+    if op_str in rtypes | itypes:
         assert(instr_split[inst_i][0] == 'r')
         second_arg = int(instr_split[inst_i][1:]) 
         assert(second_arg < 8)
         instr += second_arg << 3
         inst_i += 1
     
-    # else it's two arg (not)
     assert(instr_split[inst_i][0] == 'r')
     third_arg = int(instr_split[inst_i][1:]) 
     assert(third_arg < 8)
@@ -63,14 +71,17 @@ fout = open(filename, 'w')
 
 for instr_str in instructions:
     instr_str = instr_str.strip()
+    comment_start = instr_str.find('#')
 
     # if it's a comment
-    if instr_str[0] == "#":
+    if comment_start == 0:
         continue
-
+    elif comment_start != -1:
+        instr_str = instr_str[:comment_start]
     try:
         instr = get_machine_code(instr_str)
     except Exception as e:
+        fout.close()
         subprocess.call(['rm', '-f', filename])
         raise e
     fout.write(f"{instr:04X}\n")
