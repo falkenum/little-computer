@@ -5,7 +5,7 @@ module cpu_tb;
 
     logic CLK = 0, RST = 0;
 
-    cpu cpu_comp(CLK, RST);
+    cpu cpu_comp(.CLK(CLK), .RST(RST));
 
     initial begin
         RST = 1; #10;

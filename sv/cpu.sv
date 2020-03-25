@@ -1,8 +1,15 @@
 `include "defs.vh"
 
+
 module cpu (
     input CLK,
-    input RST
+    input RST,
+    input GSENSOR_INT1,
+    input GSENSOR_INT2,
+    output GSENSOR_CS_n,
+    output GSENSOR_SCLK,
+    output GSENSOR_SDO,
+    inout GSENSOR_SDA
 );
     reg [`RegWidth-1:0] pc;
     reg [`InstrWidth-1:0] mem [`MemLen];
@@ -55,6 +62,16 @@ module cpu (
         .rs_val(alu_use_imm ? imm_extended : rs_val), 
         .rt_val(rt_val), 
         .result(alu_out));
+    i2c i2c_comp(
+        .clk(CLK),
+        .rst(RST),
+        .GSENSOR_INT1(GSENSOR_INT1),
+        .GSENSOR_INT2(GSENSOR_INT2),
+        .GSENSOR_SCLK(GSENSOR_SCLK),
+        .GSENSOR_CS_n(GSENSOR_CS_n),
+        .GSENSOR_SDO(GSENSOR_SDO),
+        .GSENSOR_SDA(GSENSOR_SDA)
+    );
     
     always @(posedge CLK) begin
         pc = halted ? pc : 
