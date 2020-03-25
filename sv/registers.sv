@@ -17,12 +17,11 @@ module registers(
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
 
-    always @(posedge clk) begin
-        if (rst & write_en) reg_file[rd] = reg_in;
-    end
-    always @* begin
-        if (~rst) begin
-            reg_file[0] = 0;
+    always @(posedge clk, negedge rst) begin
+        if (~rst) reg_file[0] = 0;
+        else if (write_en) begin
+            // $display("writing value %x to register %x", reg_in, rd);
+            reg_file[rd] = reg_in;
         end
     end
 endmodule

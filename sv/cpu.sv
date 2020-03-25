@@ -6,15 +6,24 @@ module cpu (
     input KEY0,
     input GSENSOR_INT1,
     input GSENSOR_INT2,
-    output GSENSOR_SCLK,
     output GSENSOR_CS_n,
+    output GSENSOR_SCLK,
     output GSENSOR_SDO,
+    output [7:0] GPIO_DEBUG,
     inout GSENSOR_SDA
 );
+	parameter I2C_ADDR = 7'h1D;
+	// i2c mode
+	assign GSENSOR_CS_n = 1;
+	// primary address mode, 0x1D is the address
+	assign GSENSOR_SDO = 1;
+    assign GPIO_DEBUG = {clk_divided, KEY0, 6'b0};
+
     reg [`RegWidth-1:0] pc;
     reg [`InstrWidth-1:0] mem [`MemLen];
+    reg [5:0] clk_divided_count = 0;
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire is_lw, is_sw, rst;
+    wire is_lw, is_sw, clk_divided;
     wire [`InstrWidth-1:0] instr;
     wire [`AluOpWidth-1:0] alu_op;
     wire [`NumRegsWidth-1:0] rs, rt, rd; 
@@ -23,8 +32,9 @@ module cpu (
     wire [`JImmWidth-1:0] jimm;
     wire [`RegWidth-1:0] reg_file [`NumRegs];
 
-    assign rst = KEY0;
+    assign clk_divided = clk_divided_count[5];
     assign instr = mem[pc];
+    assign rst = KEY0;
     assign rs = instr[3*`NumRegsWidth-1:2*`NumRegsWidth];
     assign rt = instr[2*`NumRegsWidth-1:`NumRegsWidth];
     assign rd = instr[`NumRegsWidth-1:0];
@@ -57,7 +67,7 @@ module cpu (
         .rd(rd), 
         .reg_in(reg_in), 
         .write_en(reg_write_en), 
-        .clk(CLK), 
+        .clk(clk_divided), 
         .rst(rst), 
         .rs_val(rs_val), 
         .rt_val(rt_val), 
@@ -75,9 +85,20 @@ module cpu (
         .sda(GSENSOR_SDA)
     );
     
-    always @* begin
+    always @(posedge CLK_50) begin
+        clk_divided_count += 1;
+    end
+    always @(posedge clk_divided, negedge rst) begin
         if (~rst) begin
             pc = 0;
+        end
+        else begin
+            pc = halted ? pc : 
+                (beq_taken ? imm_extended + pc + 1 : 
+                (jtype ? jimm_extended : pc + 1));
+            if (is_sw) begin
+                mem[alu_out] = rd_val;
+            end
         end
     end
     always @(posedge CLK) begin
