@@ -1,10 +1,10 @@
 `include "defs.vh"
 
 module alu(
-    input [`AluOpWidth-1:0] op,
-    input [`RegWidth-1:0] rs_val,
-    input [`RegWidth-1:0] rt_val,
-    output logic [`RegWidth-1:0] result
+    input [`ALU_OP_WIDTH-1:0] op,
+    input [`REG_WIDTH-1:0] rs_val,
+    input [`REG_WIDTH-1:0] rt_val,
+    output logic [`REG_WIDTH-1:0] result
 );
 
     always @*

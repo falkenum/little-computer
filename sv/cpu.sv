@@ -12,38 +12,36 @@ module cpu (
     output [7:0] GPIO_DEBUG,
     inout GSENSOR_SDA
 );
-	parameter I2C_ADDR = 7'h1D;
 	// i2c mode
 	assign GSENSOR_CS_n = 1;
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
-    assign GPIO_DEBUG = {clk_divided, KEY0, 6'b0};
+    assign GPIO_DEBUG = {clk_800k, KEY0, GSENSOR_SCLK, GSENSOR_SDA, 4'b0};
 
-    reg [`RegWidth-1:0] pc;
-    reg [`InstrWidth-1:0] mem [`MemLen];
+    reg [`REG_WIDTH-1:0] pc;
+    reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire is_lw, is_sw, clk_divided;
-    wire [`InstrWidth-1:0] instr;
-    wire [`AluOpWidth-1:0] alu_op;
-    wire [`NumRegsWidth-1:0] rs, rt, rd; 
-    wire [`RegWidth-1:0] rs_val, rt_val, rd_val, reg_in, alu_out, imm_extended, jimm_extended;
-    wire [`ImmWidth-1:0] imm;
-    wire [`JImmWidth-1:0] jimm;
-    wire [`RegWidth-1:0] reg_file [`NumRegs];
+    wire is_lw, is_sw, clk_800k, rst;
+    wire [`INSTR_WIDTH-1:0] instr;
+    wire [`ALU_OP_WIDTH-1:0] alu_op;
+    wire [`NUM_REGS_WIDTH-1:0] rs, rt, rd; 
+    wire [`REG_WIDTH-1:0] rs_val, rt_val, rd_val, reg_in, alu_out, imm_extended, jimm_extended;
+    wire [`IMM_WIDTH-1:0] imm;
+    wire [`JIMM_WIDTH-1:0] jimm;
 
-    assign clk_divided = clk_divided_count[5];
+    assign clk_800k = clk_divided_count[5];
     assign instr = mem[pc];
     assign rst = KEY0;
-    assign rs = instr[3*`NumRegsWidth-1:2*`NumRegsWidth];
-    assign rt = instr[2*`NumRegsWidth-1:`NumRegsWidth];
-    assign rd = instr[`NumRegsWidth-1:0];
+    assign rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
+    assign rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
+    assign rd = instr[`NUM_REGS_WIDTH-1:0];
     assign beq_taken = is_beq & (rt_val == rd_val);
 
-    assign imm = instr[(`InstrWidth-`OpWidth-1):2*`NumRegsWidth];
-    assign imm_extended = {imm[`ImmWidth-1] ? ~10'b0 : 10'b0, imm};
-    assign jimm = instr[`JImmWidth-1:0];
-    assign jimm_extended = {jimm[`JImmWidth-1] ? ~4'b0 : 4'b0, jimm};
+    assign imm = instr[(`INSTR_WIDTH-`OP_WIDTH-1):2*`NUM_REGS_WIDTH];
+    assign imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
+    assign jimm = instr[`JIMM_WIDTH-1:0];
+    assign jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
     assign reg_in = is_lw ? mem[alu_out] : alu_out;
 
 	// i2c mode
@@ -67,43 +65,24 @@ module cpu (
         .rd(rd), 
         .reg_in(reg_in), 
         .write_en(reg_write_en), 
-        .clk(clk_divided), 
+        .clk(clk_800k), 
         .rst(rst), 
         .rs_val(rs_val), 
         .rt_val(rt_val), 
-        .rd_val(rd_val), 
-        .reg_file(reg_file));
+        .rd_val(rd_val)
+     );
     alu alu_comp(
         .op(alu_op), 
         .rs_val(alu_use_imm ? imm_extended : rs_val), 
         .rt_val(rt_val), 
         .result(alu_out));
-    i2c i2c_comp(
-        .clk(CLK),
-        .rst(rst),
-        .scl(GSENSOR_SCLK),
-        .sda(GSENSOR_SDA)
-    );
     
     always @(posedge CLK_50) begin
         clk_divided_count += 1;
     end
-    always @(posedge clk_divided, negedge rst) begin
-        if (~rst) begin
-            pc = 0;
-        end
+    always @(posedge clk_800k, negedge rst) begin
+        if (~rst) pc = 0;
         else begin
-            pc = halted ? pc : 
-                (beq_taken ? imm_extended + pc + 1 : 
-                (jtype ? jimm_extended : pc + 1));
-            if (is_sw) begin
-                mem[alu_out] = rd_val;
-            end
-        end
-    end
-    always @(posedge CLK) begin
-        $display("clk tick");
-        if (rst) begin
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));

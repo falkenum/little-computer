@@ -1,15 +1,15 @@
 `ifndef DEFS_VH
 `define DEFS_VH
 
-`define AluOpWidth 2
-`define RegWidth 16
-`define NumRegsWidth 3
-`define NumRegs (1 << `NumRegsWidth)
-`define InstrWidth 16
-`define ImmWidth 6
-`define JImmWidth 12
-`define MemLen (1 << 12)
-`define OpWidth 4
+`define ALU_OP_WIDTH 2
+`define REG_WIDTH 16
+`define NUM_REGS_WIDTH 3
+`define NUM_REGS (1 << `NUM_REGS_WIDTH)
+`define INSTR_WIDTH 16
+`define IMM_WIDTH 6
+`define JIMM_WIDTH 12
+`define MEM_LEN (1 << 12)
+`define OP_WIDTH 4
 
 `define OP_ADD 4'h0
 `define OP_LSL 4'h1
@@ -30,7 +30,7 @@
 `define ALU_OP_AND 'h2
 `define ALU_OP_NOT 'h3
 
-`define assert_eq(first, second) if (first !== second) $display("ASSERTION FAILED: line %d", `__LINE__)
+`define ASSERT_EQ(first, second) if (first !== second) $display("ASSERTION FAILED: line %d", `__LINE__)
 `define MAX_PATH_LEN (1<<8)
 
 `endif

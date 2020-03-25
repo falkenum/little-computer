@@ -1,18 +1,18 @@
 `include "defs.vh"
 
 module registers(
-    input [`NumRegsWidth-1:0] rs, 
-    input [`NumRegsWidth-1:0] rt, 
-    input [`NumRegsWidth-1:0] rd, 
-    input [`RegWidth-1:0] reg_in,
+    input [`NUM_REGS_WIDTH-1:0] rs, 
+    input [`NUM_REGS_WIDTH-1:0] rt, 
+    input [`NUM_REGS_WIDTH-1:0] rd, 
+    input [`REG_WIDTH-1:0] reg_in,
     input write_en,
     input clk,
     input rst,
-    output [`RegWidth-1:0] rs_val,
-    output [`RegWidth-1:0] rt_val,
-    output [`RegWidth-1:0] rd_val,
-    output reg [`RegWidth-1:0] reg_file [`NumRegs]
+    output [`REG_WIDTH-1:0] rs_val,
+    output [`REG_WIDTH-1:0] rt_val,
+    output [`REG_WIDTH-1:0] rd_val
 );
+    reg [`REG_WIDTH-1:0] reg_file [`NUM_REGS];
     assign rs_val = reg_file[rs];
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
