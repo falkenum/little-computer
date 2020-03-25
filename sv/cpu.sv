@@ -6,8 +6,8 @@ module cpu (
     input RST,
     input GSENSOR_INT1,
     input GSENSOR_INT2,
-    output GSENSOR_CS_n,
     output GSENSOR_SCLK,
+    output GSENSOR_CS_n,
     output GSENSOR_SDO,
     inout GSENSOR_SDA
 );
@@ -34,6 +34,11 @@ module cpu (
     assign jimm = instr[`JImmWidth-1:0];
     assign jimm_extended = {jimm[`JImmWidth-1] ? ~4'b0 : 4'b0, jimm};
     assign reg_in = is_lw ? mem[alu_out] : alu_out;
+
+	// i2c mode
+	assign GSENSOR_CS_n = 1;
+	// primary address mode, 0x1D is the address
+	assign GSENSOR_SDO = 1;
 
     control control_comp(
         .instr(instr), 
@@ -65,26 +70,17 @@ module cpu (
     i2c i2c_comp(
         .clk(CLK),
         .rst(RST),
-        .GSENSOR_INT1(GSENSOR_INT1),
-        .GSENSOR_INT2(GSENSOR_INT2),
-        .GSENSOR_SCLK(GSENSOR_SCLK),
-        .GSENSOR_CS_n(GSENSOR_CS_n),
-        .GSENSOR_SDO(GSENSOR_SDO),
-        .GSENSOR_SDA(GSENSOR_SDA)
+        .scl(GSENSOR_SCLK),
+        .sda(GSENSOR_SDA)
     );
     
     always @(posedge CLK) begin
-        pc = halted ? pc : 
-             (beq_taken ? imm_extended + pc + 1 : 
-             (jtype ? jimm_extended : pc + 1));
-        if (is_sw) begin
-            mem[alu_out] = rd_val;
-        end
-    end
-
-    always @* begin
-        if (~RST) begin
-            pc = 0;
+        if (!RST) pc = 0;
+        else begin
+            pc = halted ? pc : 
+                (beq_taken ? imm_extended + pc + 1 : 
+                (jtype ? jimm_extended : pc + 1));
+            if (is_sw) mem[alu_out] = rd_val;
         end
     end
 
