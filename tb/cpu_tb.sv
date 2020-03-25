@@ -5,20 +5,13 @@ module cpu_tb;
 
     logic CLK = 0, RST = 0;
 
-    cpu cpu_comp(.CLK(CLK), .RST(RST));
+    cpu cpu_comp(.CLK_50(CLK), .KEY0(RST));
 
     initial begin
         RST = 1; #10;
         RST = 0; #10;
         RST = 1; #10;
         cpu_comp.load_instr("as/halt.mem", 1); #10;
-        // $display("is_sw: %b; pc: %X; instr: %X, r0: %b; r1: %b; r2: %b", 
-        //     cpu_comp.is_sw,
-        //     cpu_comp.pc,
-        //     cpu_comp.instr,
-        //     cpu_comp.reg_file[0], 
-        //     cpu_comp.reg_file[1], 
-        //     cpu_comp.reg_file[2]);
         `assert_eq(cpu_comp.pc, 0);
         `assert_eq(cpu_comp.halted, 1);
         CLK = 1; #10;
@@ -32,6 +25,13 @@ module cpu_tb;
         CLK = 1; #10;
         CLK = 0; #10;
         `assert_eq(cpu_comp.halted, 0);
+        $display("is_sw: %b; pc: %X; instr: %X, r0: %b; r1: %b; r2: %b", 
+            cpu_comp.is_sw,
+            cpu_comp.pc,
+            cpu_comp.instr,
+            cpu_comp.reg_file[0], 
+            cpu_comp.reg_file[1], 
+            cpu_comp.reg_file[2]);
         `assert_eq(cpu_comp.pc, 1);
         `assert_eq(cpu_comp.reg_file[1], 1);
         CLK = 1; #10;

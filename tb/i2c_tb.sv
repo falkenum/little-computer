@@ -44,8 +44,8 @@ wire GSENSOR_SDO;
 // assign statements (if any)                          
 cpu cpu_comp (
 // port map - connection between master ports and signals/registers   
-	.CLK(CLK),
-	.RST(RST),
+	.CLK_50(CLK),
+	.KEY0(RST),
 	.GSENSOR_CS_n(GSENSOR_CS_n),
 	.GSENSOR_INT1(GSENSOR_INT1),
 	.GSENSOR_INT2(GSENSOR_INT2),
@@ -57,17 +57,8 @@ initial
 begin                                                  
 // code that executes only once                        
 // insert code here --> begin                          
-                                                       
-// --> end                                             
-$display("Running testbench");                       
-end                                                    
-always                                                 
-// optional sensitivity list                           
-// @(event1 or event2 or .... eventn)                  
-begin                                                  
-// code executes for every event on sensitivity list   
-// insert code here --> begin                          
-	CLK <= ~CLK; #20;
+	repeat(1000 << 6)
+		CLK <= ~CLK; #20;
                                                        
 // --> end                                             
 end                                                    

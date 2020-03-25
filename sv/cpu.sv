@@ -2,8 +2,8 @@
 
 
 module cpu (
-    input CLK,
-    input RST,
+    input CLK_50,
+    input KEY0,
     input GSENSOR_INT1,
     input GSENSOR_INT2,
     output GSENSOR_SCLK,
@@ -14,7 +14,7 @@ module cpu (
     reg [`RegWidth-1:0] pc;
     reg [`InstrWidth-1:0] mem [`MemLen];
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire is_lw, is_sw;
+    wire is_lw, is_sw, rst;
     wire [`InstrWidth-1:0] instr;
     wire [`AluOpWidth-1:0] alu_op;
     wire [`NumRegsWidth-1:0] rs, rt, rd; 
@@ -23,6 +23,7 @@ module cpu (
     wire [`JImmWidth-1:0] jimm;
     wire [`RegWidth-1:0] reg_file [`NumRegs];
 
+    assign rst = KEY0;
     assign instr = mem[pc];
     assign rs = instr[3*`NumRegsWidth-1:2*`NumRegsWidth];
     assign rt = instr[2*`NumRegsWidth-1:`NumRegsWidth];
@@ -57,7 +58,7 @@ module cpu (
         .reg_in(reg_in), 
         .write_en(reg_write_en), 
         .clk(CLK), 
-        .rst(RST), 
+        .rst(rst), 
         .rs_val(rs_val), 
         .rt_val(rt_val), 
         .rd_val(rd_val), 
@@ -69,14 +70,19 @@ module cpu (
         .result(alu_out));
     i2c i2c_comp(
         .clk(CLK),
-        .rst(RST),
+        .rst(rst),
         .scl(GSENSOR_SCLK),
         .sda(GSENSOR_SDA)
     );
     
+    always @* begin
+        if (~rst) begin
+            pc = 0;
+        end
+    end
     always @(posedge CLK) begin
-        if (!RST) pc = 0;
-        else begin
+        $display("clk tick");
+        if (rst) begin
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));

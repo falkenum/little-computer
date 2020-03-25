@@ -18,7 +18,11 @@ module registers(
     assign rd_val = reg_file[rd];
 
     always @(posedge clk) begin
-        if (~rst) reg_file[0] = 0;
-        else if (write_en) reg_file[rd] = reg_in;
+        if (rst & write_en) reg_file[rd] = reg_in;
+    end
+    always @* begin
+        if (~rst) begin
+            reg_file[0] = 0;
+        end
     end
 endmodule
