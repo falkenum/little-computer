@@ -1,7 +1,7 @@
 `include "defs.vh"
 
 module cpu (
-    input CLK,
+    input CLK_50,
     input RST
 );
     reg [`RegWidth-1:0] pc;
@@ -44,7 +44,7 @@ module cpu (
         .rd(rd), 
         .reg_in(reg_in), 
         .write_en(reg_write_en), 
-        .clk(CLK), 
+        .clk(CLK_50), 
         .rst(RST), 
         .rs_val(rs_val), 
         .rt_val(rt_val), 
@@ -56,18 +56,17 @@ module cpu (
         .rt_val(rt_val), 
         .result(alu_out));
     
-    always @(posedge CLK) begin
-        pc = halted ? pc : 
-             (beq_taken ? imm_extended + pc + 1 : 
-             (jtype ? jimm_extended : pc + 1));
-        if (is_sw) begin
-            mem[alu_out] = rd_val;
-        end
-    end
-
-    always @* begin
+    always @(posedge CLK_50, negedge RST) begin
         if (~RST) begin
             pc = 0;
+        end
+        else begin
+            pc = halted ? pc : 
+                (beq_taken ? imm_extended + pc + 1 : 
+                (jtype ? jimm_extended : pc + 1));
+            if (is_sw) begin
+                mem[alu_out] = rd_val;
+            end
         end
     end
 
