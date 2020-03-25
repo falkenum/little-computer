@@ -8,12 +8,7 @@ if ($ret_val) {
 print "running tests...\n";
 for (@files) {
     print $_ . ': ';
-    $output = `tb/$_` ;
+    system "tb/$_";
 
-    if (length $output > 0) {
-         print $output;
-    }
-    else {
-        print "\n";
-    }
+    print "\n";
 }

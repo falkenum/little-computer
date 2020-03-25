@@ -19,6 +19,9 @@ module registers(
 
     always @(posedge clk, negedge rst) begin
         if (~rst) reg_file[0] = 0;
-        else if (write_en) reg_file[rd] = reg_in;
+        else if (write_en) begin
+            // $display("writing value %x to register %x", reg_in, rd);
+            reg_file[rd] = reg_in;
+        end
     end
 endmodule
