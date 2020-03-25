@@ -1,7 +1,8 @@
 `include "defs.vh"
 
 module cpu (
-    input CLK
+    input CLK,
+    input RST
 );
     reg [`RegWidth-1:0] pc;
     reg [`InstrWidth-1:0] mem [`MemLen];
@@ -44,6 +45,7 @@ module cpu (
         .reg_in(reg_in), 
         .write_en(reg_write_en), 
         .clk(CLK), 
+        .rst(RST), 
         .rs_val(rs_val), 
         .rt_val(rt_val), 
         .rd_val(rd_val), 
@@ -60,6 +62,12 @@ module cpu (
              (jtype ? jimm_extended : pc + 1));
         if (is_sw) begin
             mem[alu_out] = rd_val;
+        end
+    end
+
+    always @* begin
+        if (~RST) begin
+            pc = 0;
         end
     end
 

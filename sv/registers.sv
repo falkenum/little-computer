@@ -7,6 +7,7 @@ module registers(
     input [`RegWidth-1:0] reg_in,
     input write_en,
     input clk,
+    input rst,
     output [`RegWidth-1:0] rs_val,
     output [`RegWidth-1:0] rt_val,
     output [`RegWidth-1:0] rd_val,
@@ -16,10 +17,8 @@ module registers(
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
 
-    initial begin
-        integer i;
-        for (i=0; i < `NumRegs; i++)
-           reg_file[i] <= 0;
+    always @* begin
+        if (~rst) reg_file[0] = 0;
     end
 
     always @(posedge clk) begin
