@@ -23,6 +23,5 @@ module alu_tb;
         `assert_eq(result, 0);
         op = `ALU_OP_NOT; #10;
         `assert_eq(result, ~(16'd2));
-        $finish;
     end
 endmodule
