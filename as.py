@@ -32,6 +32,7 @@ def get_machine_code(instr_str, pc, labels):
         
     inst_i = 1
     first_arg = 0
+    first_arg_shamt = 6
 
     if op_str in itypes:
         first_arg = instr_split[inst_i]
@@ -54,11 +55,13 @@ def get_machine_code(instr_str, pc, labels):
         first_arg &= 0x3f
     elif op_str == "j":
         try:
+            first_arg = instr_split[inst_i]
             first_arg = int(first_arg)
         except ValueError:
             assert (first_arg in labels)
             first_arg = int(labels[first_arg])
         assert(first_arg >= 0 and first_arg < 1 << 12)
+        first_arg_shamt = 0
     else:
         assert(op_str in rtypes | utypes)
         # else it's a register
@@ -66,7 +69,7 @@ def get_machine_code(instr_str, pc, labels):
         first_arg = int(instr_split[inst_i][1:])
         assert(first_arg < 8)
 
-    instr |= first_arg << 6
+    instr |= first_arg << first_arg_shamt
     inst_i += 1
 
     # if it's a three arg instruction

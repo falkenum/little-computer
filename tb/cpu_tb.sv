@@ -8,11 +8,11 @@ module cpu_tb;
     cpu cpu_comp(CLK);
 
     initial begin
-        $display("instr: %X, r0: %b; r1: %b; r2: %b", 
-            cpu_comp.instr,
-            cpu_comp.reg_state[0], 
-            cpu_comp.reg_state[1], 
-            cpu_comp.reg_state[2]);
+        // $display("instr: %X, r0: %b; r1: %b; r2: %b", 
+        //     cpu_comp.instr,
+        //     cpu_comp.reg_state[0], 
+        //     cpu_comp.reg_state[1], 
+        //     cpu_comp.reg_state[2]);
         cpu_comp.load_instr("as/halt.mem", 1); #10;
         `assert_eq(cpu_comp.pc, 0);
         `assert_eq(cpu_comp.halted, 1);
