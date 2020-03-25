@@ -8,7 +8,7 @@
 `define InstrWidth 16
 `define ImmWidth 6
 `define JImmWidth 12
-`define InstrMemLen (1 << `RegWidth)
+`define MemLen (1 << 12)
 `define OpWidth 4
 
 `define OP_ADD 4'h0

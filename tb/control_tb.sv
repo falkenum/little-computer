@@ -5,12 +5,23 @@ module control_tb;
     reg [`InstrWidth-1:0] instr;
     wire halted;
     wire jtype;
-    wire reg_write_en;
-    wire alu_use_imm;
     wire is_beq;
+    wire is_lw;
+    wire alu_use_imm;
+    wire reg_write_en;
+    wire data_mem_en;
     wire [`AluOpWidth-1:0] alu_op;
    
-    control control_comp(instr, halted, jtype, reg_write_en, alu_use_imm, is_beq, alu_op);
+    control control_comp(
+        .instr(instr), 
+        .halted(halted), 
+        .jtype(jtype), 
+        .is_beq(is_beq), 
+        .is_lw(is_lw), 
+        .is_sw(is_sw),
+        .alu_use_imm(alu_use_imm),
+        .reg_write_en(reg_write_en), 
+        .alu_op(alu_op));
 
     initial begin
         instr = {`OP_HALT, 12'b0}; #10;
