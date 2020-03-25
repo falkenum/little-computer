@@ -44,8 +44,8 @@ wire GSENSOR_SDO;
 // assign statements (if any)                          
 cpu cpu_comp (
 // port map - connection between master ports and signals/registers   
-	.CLK(CLK),
-	.RST(RST),
+	.CLK_50(CLK),
+	.KEY0(RST),
 	.GSENSOR_CS_n(GSENSOR_CS_n),
 	.GSENSOR_INT1(GSENSOR_INT1),
 	.GSENSOR_INT2(GSENSOR_INT2),
