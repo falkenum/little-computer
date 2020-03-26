@@ -69,38 +69,34 @@ module cpu(
     reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
     reg [7:0] spi_data;
+    reg [`MEM_LEN_WIDTH-1:0] load_counter = 0;
 
     wire spi_cs = ARDUINO_IO[10];
     wire spi_mosi = ARDUINO_IO[11];
     wire spi_miso = ARDUINO_IO[12]; 
     wire spi_clk = ARDUINO_IO[13];
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
+    wire is_lw, is_sw, clk_800k, cpu_clk, rst, spi_byte_ready;
     wire [`INSTR_WIDTH-1:0] instr;
     wire [`ALU_OP_WIDTH-1:0] alu_op;
     wire [`NUM_REGS_WIDTH-1:0] rs, rt, rd; 
     wire [`REG_WIDTH-1:0] rs_val, rt_val, rd_val, reg_in, alu_out, imm_extended, jimm_extended;
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
-
-    assign debug_mode = SW[0];
+    wire debug_mode = SW[0];
     // assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
-	// i2c mode
-	assign GSENSOR_CS_N = 1;
-	// primary address mode, 0x1D is the address
-	assign GSENSOR_SDO = 1;
-    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_clk, 4'b0};
+
+    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_clk, rst, spi_byte_ready, 2'b0};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
     assign cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
     assign instr = mem[pc];
-    assign rst = KEY[0];
+    assign rst = KEY[0] & GPIO[8];
     assign rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
     assign rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     assign rd = instr[`NUM_REGS_WIDTH-1:0];
     assign beq_taken = is_beq & (rt_val == rd_val);
-
     assign imm = instr[(`INSTR_WIDTH-`OP_WIDTH-1):2*`NUM_REGS_WIDTH];
     assign imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
     assign jimm = instr[`JIMM_WIDTH-1:0];
@@ -117,13 +113,14 @@ module cpu(
         .mosi(spi_mosi),
         .miso(spi_miso),
         .cs(spi_cs),
-        .data(spi_data)
+        .data_out(spi_data)
+        // .byte_ready(spi_byte_ready)
     );
     display display_comp(
         .enable(debug_mode), 
         .instr(instr), 
-        // .pc(pc[7:0]), 
-        .pc(spi_data), 
+        .pc(pc[7:0]), 
+        // .pc(spi_data), 
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
     control control_comp(
@@ -155,24 +152,31 @@ module cpu(
         .rt_val(rt_val), 
         .result(alu_out)
     );
+
     
     always @(posedge MAX10_CLK1_50) begin
         clk_divided_count += 1;
     end
     always @(posedge cpu_clk, negedge rst) begin
-        if (~rst) pc <= 0;
+        if (~rst) begin 
+            pc = 0;
+            // if (spi_byte_ready) begin
+            //     mem[load_counter] = {8'b0, spi_data};
+            //     load_counter += 1;
+            // end
+        end
         else begin
-            pc <= halted ? pc : 
+            pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
             if (is_sw)
             case(alu_out)
                 `SCL_ADDR: begin
-                    scl_r <= rd_val[0];
+                    scl_r = rd_val[0];
                 end
-                `SDA_ADDR: sda_r <= rd_val[0];
-                `SDA_CLEAR_ADDR: sda_r <= 'bz;
-                default: mem[alu_out] <= rd_val;
+                `SDA_ADDR: sda_r = rd_val[0];
+                `SDA_CLEAR_ADDR: sda_r = 'bz;
+                default: mem[alu_out] = rd_val;
             endcase
         end
     end
