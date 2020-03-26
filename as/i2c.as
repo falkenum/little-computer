@@ -2,15 +2,22 @@
 i2c_addr:
     .word 001D
 scl_addr:
-    .word 0FF0
+    .word F0
 sda_addr:
-    .word 0FF1
+    .word F1
 sda_clear_addr:
-    .word 0FF2
+    .word F2
 start:
     lw scl_addr r0 r1
-    addi 1 r0 r1
+    addi 1 r0 r2
+    sw 0 r1 r2
     nop
     nop
-    addi 0 r0 r1
-    halt
+    nop
+    nop
+    sw 0 r1 r0
+    nop
+    nop
+    nop
+    nop
+    j start

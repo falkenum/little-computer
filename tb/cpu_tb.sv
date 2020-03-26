@@ -5,7 +5,7 @@ module cpu_tb;
 
     logic CLK = 0, RST = 0;
 
-    cpu cpu_comp(.CLK_50(CLK), .KEY0(RST));
+    cpu cpu_comp(.MAX10_CLK1_50(CLK), .KEY({1'b1, RST}));
 
     task step_cycles(integer num_cycles);
         repeat (num_cycles << 6) begin
