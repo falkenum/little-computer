@@ -36,9 +36,6 @@ module cpu_tb;
         step_cycles(1);
         `ASSERT_EQ(cpu_comp.halted, 0);
         `ASSERT_EQ(cpu_comp.pc, 2);
-        // $display("pc: %x; reg1: %x", 
-        //     cpu_comp.pc,
-        //     cpu_comp.registers_comp.reg_file[1]);
         `ASSERT_EQ(cpu_comp.registers_comp.reg_file[1], 1);
         step_cycles(1);
         `ASSERT_EQ(cpu_comp.registers_comp.reg_file[1], 2);
@@ -83,6 +80,11 @@ module cpu_tb;
         `ASSERT_EQ(cpu_comp.registers_comp.reg_file[0], 0);
         `ASSERT_EQ(cpu_comp.registers_comp.reg_file[1], 'h6001);
         `ASSERT_EQ(cpu_comp.mem[31], 'h6002);
+        // $display("pc: %x; reg1: %x; mem[31]: %x", 
+        //     cpu_comp.pc,
+        //     cpu_comp.registers_comp.reg_file[1],
+        //     cpu_comp.mem[31]
+        // );
     end
 endmodule
 

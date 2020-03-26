@@ -23,6 +23,10 @@ jtypes = {"j"}
 def get_machine_code(instr_str, pc, labels):
     instr_split = instr_str.split()
     op_str = instr_split[0]
+
+    if instr_split[0] == ".word":
+        return int(instr_split[1], base=16)
+
     assert(op_str in op_to_code)
     opcode = op_to_code[op_str]
     instr = opcode << 12

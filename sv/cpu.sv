@@ -1,5 +1,8 @@
 `include "defs.vh"
 
+`define SCL_ADDR 16'hFF0
+`define SDA_ADDR 16'hFF1
+`define SDA_CLEAR_ADDR 16'hFF2
 
 module cpu (
     input CLK_50,
@@ -18,6 +21,7 @@ module cpu (
 	assign GSENSOR_SDO = 1;
     assign GPIO_DEBUG = {clk_800k, KEY0, GSENSOR_SCLK, GSENSOR_SDA, 4'b0};
 
+    reg scl_r, sda_r;
     reg [`REG_WIDTH-1:0] pc;
     reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
@@ -30,6 +34,8 @@ module cpu (
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
 
+    assign GSENSOR_SCLK = scl_r;
+    assign GSENSOR_SDA = sda_r;
     assign clk_800k = clk_divided_count[5];
     assign instr = mem[pc];
     assign rst = KEY0;
@@ -42,7 +48,7 @@ module cpu (
     assign imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
     assign jimm = instr[`JIMM_WIDTH-1:0];
     assign jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
-    assign reg_in = is_lw ? mem[alu_out] : alu_out;
+    assign reg_in = is_lw ? (alu_out == `SDA_ADDR ? {15'b0, GSENSOR_SDA}: mem[alu_out]) : alu_out;
 
 	// i2c mode
 	assign GSENSOR_CS_n = 1;
@@ -81,12 +87,17 @@ module cpu (
         clk_divided_count += 1;
     end
     always @(posedge clk_800k, negedge rst) begin
-        if (~rst) pc = 0;
+        if (~rst) pc <= 0;
         else begin
-            pc = halted ? pc : 
+            pc <= halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
-            if (is_sw) mem[alu_out] = rd_val;
+            if (is_sw) begin
+                if (alu_out == `SCL_ADDR) scl_r <= rd_val[0];
+                else if (alu_out == `SDA_ADDR) sda_r <= rd_val[0];
+                else if (alu_out == `SDA_CLEAR_ADDR) sda_r <= 'bz;
+                else mem[alu_out] <= rd_val;
+            end
         end
     end
 
