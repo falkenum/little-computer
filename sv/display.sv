@@ -3,7 +3,7 @@
 module display(
     input enable,
     input [`INSTR_WIDTH-1:0] instr,
-    input [`REG_WIDTH-1:0] pc,
+    input [7:0] pc,
     output [5:0][7:0] hex
 );
     segdisplay seg0(~enable, 1'b0, pc[3:0], hex[0]);

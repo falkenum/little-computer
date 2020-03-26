@@ -68,10 +68,14 @@ module cpu(
     reg [`REG_WIDTH-1:0] pc;
     reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
-    reg [7:0] uart_data;
+    reg [7:0] spi_data;
 
+    wire spi_cs = ARDUINO_IO[10];
+    wire spi_mosi = ARDUINO_IO[11];
+    wire spi_miso = ARDUINO_IO[12]; 
+    wire spi_clk = ARDUINO_IO[13];
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire rx, is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
+    wire is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
     wire [`INSTR_WIDTH-1:0] instr;
     wire [`ALU_OP_WIDTH-1:0] alu_op;
     wire [`NUM_REGS_WIDTH-1:0] rs, rt, rd; 
@@ -79,14 +83,13 @@ module cpu(
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
 
-    assign rx = GPIO[8];
     assign debug_mode = SW[0];
-    assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
+    // assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
 	// i2c mode
 	assign GSENSOR_CS_N = 1;
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
-    assign GPIO[7:0] = {clk_800k, uart_state, rx, uart_data_ready, uart_clk, 1'b0};
+    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_clk, 4'b0};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
@@ -109,21 +112,19 @@ module cpu(
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
 
-    wire uart_clk;
-    wire [2:0] uart_state;
-    uart uart_comp(
-        .rx(rx),
-        .clk_800k(clk_800k),
-        .data(uart_data),
-        .data_ready(uart_data_ready),
-        .clk_out(uart_clk),
-        .state_out(uart_state)
+    spi spi_comp(
+        .clk(spi_clk),
+        .mosi(spi_mosi),
+        .miso(spi_miso),
+        .cs(spi_cs),
+        .data(spi_data)
     );
     display display_comp(
         .enable(debug_mode), 
         .instr(instr), 
-        .pc(pc), 
-        .hex({HEX0, HEX1, HEX2, HEX3, HEX4, HEX5})
+        // .pc(pc[7:0]), 
+        .pc(spi_data), 
+        .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
     control control_comp(
         .instr(instr), 

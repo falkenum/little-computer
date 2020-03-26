@@ -50,11 +50,6 @@ module uart(
             else next_state = state;
     endcase
 
-    // always @(negedge rx) begin
-    //     if (state == `STATE_IDLE)
-    //         start_received = 1;
-    // end
-
     always @(posedge clk_9600_baud) begin
         state = next_state;
         case (state)
