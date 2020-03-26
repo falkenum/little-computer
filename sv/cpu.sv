@@ -71,7 +71,7 @@ module cpu(
     reg [7:0] uart_data;
 
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire uart_clk, rx, is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
+    wire rx, is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
     wire [`INSTR_WIDTH-1:0] instr;
     wire [`ALU_OP_WIDTH-1:0] alu_op;
     wire [`NUM_REGS_WIDTH-1:0] rs, rt, rd; 
@@ -86,7 +86,7 @@ module cpu(
 	assign GSENSOR_CS_N = 1;
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
-    assign GPIO[7:0] = {clk_800k, KEY[0] , GSENSOR_SCLK, GSENSOR_SDI, rx, uart_data_ready, uart_clk, 1'b0};
+    assign GPIO[7:0] = {clk_800k, uart_state, rx, uart_data_ready, uart_clk, 1'b0};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
@@ -109,12 +109,15 @@ module cpu(
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
 
+    wire uart_clk;
+    wire [2:0] uart_state;
     uart uart_comp(
         .rx(rx),
         .clk_800k(clk_800k),
         .data(uart_data),
         .data_ready(uart_data_ready),
-        .clk_out(uart_clk)
+        .clk_out(uart_clk),
+        .state_out(uart_state)
     );
     display display_comp(
         .enable(debug_mode), 
