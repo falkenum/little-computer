@@ -61,16 +61,17 @@ module cpu(
 	inout 		          		ARDUINO_RESET_N,
 
 	//////////// GPIO, GPIO connect to GPIO Default //////////
-	output 		    [35:0]		DEBUGGPIO
+	inout 		    [35:0]		GPIO
 );
-
 
     reg scl_r = 0, sda_r = 'bz;
     reg [`REG_WIDTH-1:0] pc;
     reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
+    reg [7:0] uart_data;
+
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
-    wire is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
+    wire uart_clk, rx, is_lw, is_sw, clk_800k, cpu_clk, rst, debug_mode;
     wire [`INSTR_WIDTH-1:0] instr;
     wire [`ALU_OP_WIDTH-1:0] alu_op;
     wire [`NUM_REGS_WIDTH-1:0] rs, rt, rd; 
@@ -78,13 +79,14 @@ module cpu(
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
 
+    assign rx = GPIO[8];
     assign debug_mode = SW[0];
     assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
 	// i2c mode
 	assign GSENSOR_CS_N = 1;
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
-    assign DEBUGGPIO = {clk_800k, KEY[0], GSENSOR_SCLK, GSENSOR_SDI, 4'b0};
+    assign GPIO[7:0] = {clk_800k, KEY[0] , GSENSOR_SCLK, GSENSOR_SDI, rx, uart_data_ready, uart_clk, 1'b0};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
@@ -107,6 +109,13 @@ module cpu(
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
 
+    uart uart_comp(
+        .rx(rx),
+        .clk_800k(clk_800k),
+        .data(uart_data),
+        .data_ready(uart_data_ready),
+        .clk_out(uart_clk)
+    );
     display display_comp(
         .enable(debug_mode), 
         .instr(instr), 
