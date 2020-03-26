@@ -64,12 +64,6 @@ module cpu(
 	output 		    [35:0]		DEBUGGPIO
 );
 
-    segdisplay seg0(~debug_mode, 0, pc[3:0], HEX0);
-    segdisplay seg1(~debug_mode, 0, pc[7:4], HEX1);
-    segdisplay seg2(~debug_mode, 1, instr[3:0], HEX2);
-    segdisplay seg3(~debug_mode, 0, instr[7:4], HEX3);
-    segdisplay seg4(~debug_mode, 0, instr[11:8], HEX4);
-    segdisplay seg5(~debug_mode, 0, instr[15:12], HEX5);
 
     reg scl_r = 0, sda_r = 'bz;
     reg [`REG_WIDTH-1:0] pc;
@@ -83,7 +77,6 @@ module cpu(
     wire [`REG_WIDTH-1:0] rs_val, rt_val, rd_val, reg_in, alu_out, imm_extended, jimm_extended;
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
-
 
     assign debug_mode = SW[0];
     assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
@@ -110,10 +103,16 @@ module cpu(
     assign reg_in = is_lw ? (alu_out == `SDA_ADDR ? {15'b0, GSENSOR_SDI}: mem[alu_out]) : alu_out;
 
 	// i2c mode
-	assign GSENSOR_CS_n = 1;
+	assign GSENSOR_CS_N = 1;
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
 
+    display display_comp(
+        .enable(debug_mode), 
+        .instr(instr), 
+        .pc(pc), 
+        .hex({HEX0, HEX1, HEX2, HEX3, HEX4, HEX5})
+    );
     control control_comp(
         .instr(instr), 
         .halted(halted), 
@@ -123,7 +122,8 @@ module cpu(
         .is_sw(is_sw),
         .alu_use_imm(alu_use_imm),
         .reg_write_en(reg_write_en), 
-        .alu_op(alu_op));
+        .alu_op(alu_op)
+    );
     registers registers_comp(
         .rs(rs), 
         .rt(rt), 
@@ -135,12 +135,13 @@ module cpu(
         .rs_val(rs_val), 
         .rt_val(rt_val), 
         .rd_val(rd_val)
-     );
+    );
     alu alu_comp(
         .op(alu_op), 
         .rs_val(alu_use_imm ? imm_extended : rs_val), 
         .rt_val(rt_val), 
-        .result(alu_out));
+        .result(alu_out)
+    );
     
     always @(posedge MAX10_CLK1_50) begin
         clk_divided_count += 1;
@@ -159,49 +160,13 @@ module cpu(
                 `SDA_ADDR: sda_r <= rd_val[0];
                 `SDA_CLEAR_ADDR: sda_r <= 'bz;
                 default: mem[alu_out] <= rd_val;
-                // if (alu_out == `SCL_ADDR) scl_r <= rd_val[0];
-                // else if (alu_out == `SDA_ADDR) sda_r <= rd_val[0];
-                // else if (alu_out == `SDA_CLEAR_ADDR) sda_r <= 'bz;
-                // else mem[alu_out] <= rd_val;
             endcase
         end
     end
-
-    // always @(GSENSOR_SCLK) begin
-    //     $display("scl val changed to %b", GSENSOR_SCLK);
-    // end
 
     task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
         pc = 0;
         $readmemh("as/i2c.mem", mem, 0, 18);
         // $readmemh(instr_path, mem, 0, num_instr-1);
     endtask
-endmodule
-
-module segdisplay(
-    input turn_off,
-    input dp,
-    input [3:0] num,
-    output reg [7:0] segments
-);
-    always @*
-        if (turn_off) segments <= 8'hff;
-        else case (num)
-            'h0: segments <= {~dp, 7'b1000000};
-            'h1: segments <= {~dp, 7'b1111001};
-            'h2: segments <= {~dp, 7'b0100100};
-            'h3: segments <= {~dp, 7'b0110000};
-            'h4: segments <= {~dp, 7'b0011001};
-            'h5: segments <= {~dp, 7'b0010010};
-            'h6: segments <= {~dp, 7'b0000010};
-            'h7: segments <= {~dp, 7'b1111000};
-            'h8: segments <= {~dp, 7'b0000000};
-            'h9: segments <= {~dp, 7'b0011000};
-            'ha: segments <= {~dp, 7'b0001000};
-            'hb: segments <= {~dp, 7'b0000011};
-            'hc: segments <= {~dp, 7'b1000110};
-            'hd: segments <= {~dp, 7'b0100001};
-            'he: segments <= {~dp, 7'b0000110};
-            'hf: segments <= {~dp, 7'b0001110};
-        endcase
 endmodule
