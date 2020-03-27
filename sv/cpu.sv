@@ -81,13 +81,13 @@ module cpu(
     wire debug_mode = SW[0];
     // assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
 
-    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_sck, spi_begin_transaction, spi_state, 2'b0};
+    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_sck, spi_begin_transaction, spi_state, rst};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
     assign cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
     assign instr = mem[pc];
-    assign rst = KEY[0] & GPIO[8];
+    assign rst = KEY[0]; //  & GPIO[8];
     assign rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
     assign rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     assign rd = instr[`NUM_REGS_WIDTH-1:0];
@@ -104,21 +104,21 @@ module cpu(
 	assign GSENSOR_SDO = 1;
 
     wire spi_sck, spi_miso, spi_mosi, spi_cs, spi_begin_transaction;
-    wire spi_state;
+    wire [1:0] spi_state;
     reg [`REG_WIDTH-1:0] spi_transaction_length = 1 << 8;
     assign spi_begin_transaction = ~KEY[1];
     assign ARDUINO_IO[13] = spi_sck;
     assign spi_miso = ARDUINO_IO[12];
-    assign ARDUINO_IO[11] = spi_mosi;
     assign ARDUINO_IO[10] = spi_cs;
     spi spi_comp(
         .clk_800k(clk_800k),
         .sck(spi_sck),
         .miso(spi_miso),
-        .mosi(spi_mosi),
+        .rst(rst),
+        // .mosi(ARDUINO_IO[11]),
         .cs(spi_cs),
         .begin_transaction(spi_begin_transaction),
-        .transaction_length(spi_transaction_length),
+        // .transaction_length(spi_transaction_length),
         .state_out(spi_state)
     );
     display display_comp(
