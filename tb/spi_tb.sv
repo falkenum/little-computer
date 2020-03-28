@@ -23,11 +23,8 @@ module spi_tb();
         `ASSERT_EQ (spi_comp.cs, 0);
         `ASSERT_EQ (spi_comp.state, 1);
         `ASSERT_EQ (spi_comp.delay_finished, 0);
-        $display(spi_comp.delay_count); #100
         `ASSERT_EQ (spi_comp.delay_finished, 0);
-        $display(spi_comp.delay_count); #500
         `ASSERT_EQ (spi_comp.delay_finished, 1);
-        $display(spi_comp.delay_count);
         spi_begin_transaction = 0; #500;
         `ASSERT_EQ (spi_comp.state, 2);
     end

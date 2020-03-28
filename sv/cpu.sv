@@ -1,8 +1,5 @@
 `include "defs.vh"
 
-`define SCL_ADDR 16'hF0
-`define SDA_ADDR 16'hF1
-`define SDA_CLEAR_ADDR 16'hF2
 `define SEG_DISPLAY_OFF 8'hFF
 
 module cpu(
@@ -64,11 +61,13 @@ module cpu(
 	inout 		    [35:0]		GPIO
 );
 
-    reg scl_r = 0, sda_r = 'bz;
     reg [`REG_WIDTH-1:0] pc;
-    reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
-
+    wire [`REG_WIDTH-1:0] uart_word_count;
+    wire uart_word_ready;
+    wire [`WORD_WIDTH-1:0] uart_data_word;
+    wire uart_rx, uart_byte_ready;
+    wire [7:0] uart_data_byte;
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
     wire is_lw, is_sw, clk_800k, cpu_clk, rst;
     wire [`INSTR_WIDTH-1:0] instr;
@@ -78,15 +77,13 @@ module cpu(
     wire [`IMM_WIDTH-1:0] imm;
     wire [`JIMM_WIDTH-1:0] jimm;
     wire debug_mode = SW[0];
-    // assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
+    wire [`WORD_WIDTH-1:0] memory_data_out;
+    wire load_en = SW[1];
 
-    assign GPIO[7:0] = {uart_clk, uart_state[1], uart_state[0], uart_data_ready, uart_rx, MAX10_CLK1_50, 2'b0};
-    assign GSENSOR_SCLK = scl_r;
-    assign GSENSOR_SDI = sda_r;
+    assign GPIO[7:0] = {8'b0};
     assign clk_800k = clk_divided_count[5];
     assign cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
-    assign instr = mem[pc];
-    assign rst = KEY[0]; //  & GPIO[8];
+    assign rst = ~load_en & KEY[0];
     assign rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
     assign rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     assign rd = instr[`NUM_REGS_WIDTH-1:0];
@@ -95,27 +92,27 @@ module cpu(
     assign imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
     assign jimm = instr[`JIMM_WIDTH-1:0];
     assign jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
-    assign reg_in = is_lw ? (alu_out == `SDA_ADDR ? {15'b0, GSENSOR_SDI}: mem[alu_out]) : alu_out;
-
-	// i2c mode
-	assign GSENSOR_CS_N = 1;
-	// primary address mode, 0x1D is the address
-	assign GSENSOR_SDO = 1;
-
-    wire uart_rx, uart_data_ready, uart_clk;
-    wire [1:0] uart_state;
-    wire [7:0] uart_data;
+    assign reg_in = is_lw ? memory_data_out : alu_out;
 
     assign uart_rx = GPIO[8];
+    // common ground with USB to TTL
     assign GPIO[9] = 0;
 
     uart_rx uart_comp(
         .rx(uart_rx),
         .clk_50M(MAX10_CLK1_50),
-        .data(uart_data),
-        .data_ready(uart_data_ready),
-        .clk_out(uart_clk),
-        .state_out(uart_state)
+        .data(uart_data_byte),
+        .data_ready(uart_byte_ready)
+    );
+
+    memory memory_comp(
+        .data_addr(load_en ? uart_load_counter : alu_out),
+        .pc(pc),
+        .data_in(load_en ? uart_data_word : rd_val),
+        .clk(load_en ? uart_word_ready : cpu_clk),
+        .write_en(is_sw),
+        .instr(instr),
+        .data_out(memory_data_out)
     );
 
     // wire spi_sck, spi_miso, spi_mosi, spi_cs, spi_begin_transaction;
@@ -140,8 +137,8 @@ module cpu(
     display display_comp(
         .enable(debug_mode), 
         .instr(instr), 
-        // .pc(pc[7:0]), 
-        .pc(uart_data), 
+        .pc(pc[7:0]), 
+        // .pc(uart_data), 
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
     control control_comp(
@@ -175,37 +172,46 @@ module cpu(
     );
 
     
-    always @(posedge MAX10_CLK1_50) begin
-        clk_divided_count += 1;
-    end
+    // always @(posedge MAX10_CLK1_50) begin
+    //     clk_divided_count += 1;
+    //     state = next_state;
+
+    //     case(state)
+    //         `STATE_RUNNING:
+    //         `STATE_RESET:
+    //         `STATE_LOAD_FIRST_BYTE:
+    //         `STATE_LOAD_SECOND_BYTE:
+    //     endcase
+    // end
+
+    // always @(posedge uart_byte_ready) begin
+    //     if (~uart_received_first_byte) begin
+    //         uart_data_word <= {8'b0, uart_data_byte};
+    //         uart_received_first_byte <= 1;
+    //         uart_word_ready <= 0;
+    //     end
+    //     else begin
+    //         uart_data_word <= {uart_data_byte, uart_data_word[7:0]};
+    //         uart_received_first_byte <= 0;
+    //         uart_word_ready <= 1;
+    //     end
+    // end
+
     always @(posedge cpu_clk, negedge rst) begin
         if (~rst) begin 
             pc = 0;
-            // if (spi_byte_ready) begin
-            //     mem[load_counter] = {8'b0, spi_data};
-            //     load_counter += 1;
+
+            // if (uart_word_ready) begin
+            //     mem[uart_load_counter] = uart_data_word;
+            //     uart_load_counter += 1;
+            //     if (uart_load_counter == `MEM_LEN) 
+            //         uart_load_counter = 0;
             // end
         end
         else begin
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
-            if (is_sw)
-            case(alu_out)
-                `SCL_ADDR: begin
-                    scl_r = rd_val[0];
-                end
-                `SDA_ADDR: sda_r = rd_val[0];
-                `SDA_CLEAR_ADDR: sda_r = 'bz;
-                default: mem[alu_out] = rd_val;
-            endcase
         end
     end
-
-    // for simulations
-    // task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
-    //     pc = 0;
-    //     // $readmemh("as/i2c.mem", mem, 0, 18);
-    //     $readmemh(instr_path, mem, 0, num_instr-1);
-    // endtask
 endmodule

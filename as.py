@@ -129,8 +129,10 @@ def main():
 
     lines = read_data.split('\n')
 
-    filename = str(Path(sys.argv[1]).with_suffix('.rom'))
-    fout = open(filename, 'wb')
+    filename_rom = str(Path(sys.argv[1]).with_suffix('.rom'))
+    fout_rom = open(filename_rom, 'wb')
+    filename_mem = str(Path(sys.argv[1]).with_suffix('.mem'))
+    fout_mem = open(filename_mem, 'w')
 
     labels = {}
 
@@ -139,12 +141,15 @@ def main():
         try:
             instr = get_machine_code(instr_str, pc, labels)
         except Exception as e:
-            fout.close()
-            os.remove(filename)
+            fout_rom.close()
+            fout_mem.close()
+            os.remove(filename_rom)
+            os.remove(filename_mem)
             raise e
-        # fout.write(f"{instr:04X}\n")
-        fout.write(instr.to_bytes(length=2, byteorder='little'))
-    fout.close()
+        fout_rom.write(instr.to_bytes(length=2, byteorder='little'))
+        fout_mem.write(f"{instr:04X}\n")
+    fout_rom.close()
+    fout_mem.close()
 
 if __name__ == '__main__':
     main()

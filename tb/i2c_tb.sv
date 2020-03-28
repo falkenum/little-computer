@@ -13,11 +13,11 @@ module i2c_tb();
         end
     endtask
 
-    initial begin
-        RST = 1; #10;
-        RST = 0; #10;
-        RST = 1; #10;
-        cpu_comp.load_instr("as/i2c.mem", 12); #10;
-        step_cycles(100);
-    end
+    // initial begin
+    //     RST = 1; #10;
+    //     RST = 0; #10;
+    //     RST = 1; #10;
+    //     cpu_comp.load_instr("as/i2c.mem", 12); #10;
+    //     step_cycles(100);
+    // end
 endmodule

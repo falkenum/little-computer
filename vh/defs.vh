@@ -2,10 +2,11 @@
 `define DEFS_VH
 
 `define ALU_OP_WIDTH 2
-`define REG_WIDTH 16
+`define WORD_WIDTH 16
+`define REG_WIDTH `WORD_WIDTH
+`define INSTR_WIDTH `WORD_WIDTH
 `define NUM_REGS_WIDTH 3
 `define NUM_REGS (1 << `NUM_REGS_WIDTH)
-`define INSTR_WIDTH 16
 `define IMM_WIDTH 6
 `define JIMM_WIDTH 12
 `define MEM_LEN_WIDTH 8
