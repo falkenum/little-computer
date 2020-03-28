@@ -61,14 +61,15 @@ module little_computer(
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_divided_count = 0;
 
-    wire clk_800k = clk_divided_count[5];
     wire uart_rx = GPIO[8];
     wire rst = KEY[0];
     wire debug_mode = SW[0];
     wire load_en = SW[1];
+    wire clk_800k = clk_divided_count[5];
     wire cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
+    wire cpu_rst = rst & ~load_en;
 
-    wire uart_byte_ready, uart_word_ready;
+    wire uart_byte_ready, uart_word_ready, mem_write_en;
     wire [`WORD_WIDTH-1:0] uart_word_count, uart_word, 
         memory_data_out, instr, pc, cpu_data_out, cpu_data_addr;
     wire [7:0] uart_byte;
@@ -76,7 +77,7 @@ module little_computer(
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
         .uart_byte(uart_byte),
-        .rst(),
+        .rst(rst),
         .uart_word_ready(uart_word_ready),
         .uart_word_count(uart_word_count),
         .uart_word(uart_word)
@@ -115,7 +116,8 @@ module little_computer(
         .data_in(memory_data_out),
         .pc(pc),
         .data_addr(cpu_data_addr),
-        .data_out(cpu_data_out)
+        .data_out(cpu_data_out),
+        .mem_write_en(mem_write_en)
     );
 
     always @(posedge MAX10_CLK1_50, negedge rst) begin

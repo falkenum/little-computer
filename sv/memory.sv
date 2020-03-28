@@ -14,6 +14,7 @@ module memory(
     assign instr = mem[pc];
     assign data_out = mem[data_addr];
     always @(posedge clk) begin
+        // $display("memory clocked");
         if (write_en) begin
             // $display("writing %x to addr %x", data_in, data_addr);
             mem[data_addr] <= data_in;

@@ -7,14 +7,13 @@ module cpu(
     input [`WORD_WIDTH-1:0] data_in,
     output [`WORD_WIDTH-1:0] data_addr,
     output [`WORD_WIDTH-1:0] data_out,
-    output reg [`WORD_WIDTH-1:0] pc
+    output reg [`WORD_WIDTH-1:0] pc,
+    output reg mem_write_en
 );
 
     assign data_addr = alu_out;
     assign data_out = rd_val;
 
-    reg mem_write_en = 0;
-    
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J;
@@ -64,6 +63,7 @@ module cpu(
     always @(posedge clk, negedge rst) begin
         if (~rst) begin 
             pc = 0;
+            mem_write_en = 0;
         end
         else begin
             pc = halted ? pc : 
