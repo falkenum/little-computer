@@ -15,7 +15,8 @@ module memory(
     assign data_out = mem[data_addr];
     always @(posedge clk) begin
         if (write_en) begin
-            mem[data_addr] = data_in;
+            // $display("writing %x to addr %x", data_in, data_addr);
+            mem[data_addr] <= data_in;
         end 
     end
 endmodule

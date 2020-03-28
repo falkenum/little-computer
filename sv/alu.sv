@@ -7,7 +7,7 @@ module alu(
     output logic [`REG_WIDTH-1:0] result
 );
 
-    always @*
+    always @* begin
     case (op)
         `ALU_OP_ADD: result <= rs_val + rt_val;
         `ALU_OP_LSL: result <= rs_val << rt_val;
@@ -15,5 +15,7 @@ module alu(
         `ALU_OP_NOT: result <= ~rs_val;
         default: result <= 0;
     endcase
+    // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", result, op, rs_val, rt_val);
+    end
 
 endmodule

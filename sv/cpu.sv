@@ -62,7 +62,8 @@ module cpu(
 );
 
     reg [`REG_WIDTH-1:0] pc;
-    reg [5:0] clk_divided_count = 0;
+    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_divided_count = 0;
+    reg mem_write_en = 0;
     wire [`REG_WIDTH-1:0] uart_word_count;
     wire uart_word_ready;
     wire [`WORD_WIDTH-1:0] uart_data_word;
@@ -80,6 +81,20 @@ module cpu(
     wire [`WORD_WIDTH-1:0] memory_data_out;
     wire load_en = SW[1];
 
+    wire [`OP_WIDTH-1:0] op;
+    wire itype;
+    assign op = instr[`INSTR_WIDTH-1:`INSTR_WIDTH-`OP_WIDTH];
+    
+    assign is_beq = op == `OP_BEQ;
+    assign halted = op == `OP_HALT;
+    assign jtype = op == `OP_J;
+    assign is_lw = op == `OP_LW;
+    assign is_sw = op == `OP_SW;
+    assign itype = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b01;
+    assign alu_use_imm = itype & op != `OP_BEQ;
+    assign reg_write_en = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b00 | op == `OP_ADDI | op == `OP_LW;
+    assign alu_op = (is_lw | is_sw) ? `ALU_OP_ADD : op[`OP_WIDTH-3:`OP_WIDTH-4];
+
     assign GPIO[7:0] = {8'b0};
     assign clk_800k = clk_divided_count[5];
     assign cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
@@ -95,22 +110,25 @@ module cpu(
     assign reg_in = is_lw ? memory_data_out : alu_out;
 
     assign uart_rx = GPIO[8];
-    // common ground with USB to TTL
-    assign GPIO[9] = 0;
 
     uart_rx uart_comp(
+        // green wire
         .rx(uart_rx),
         .clk_50M(MAX10_CLK1_50),
         .data(uart_data_byte),
         .data_ready(uart_byte_ready)
     );
 
+    always @(load_en, alu_out) begin
+        // $display("load_en: %b; alu_out: %x", load_en, alu_out);
+    end
+
     memory memory_comp(
         .data_addr(load_en ? uart_load_counter : alu_out),
         .pc(pc),
         .data_in(load_en ? uart_data_word : rd_val),
         .clk(load_en ? uart_word_ready : cpu_clk),
-        .write_en(is_sw),
+        .write_en(mem_write_en),
         .instr(instr),
         .data_out(memory_data_out)
     );
@@ -141,17 +159,6 @@ module cpu(
         // .pc(uart_data), 
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
-    control control_comp(
-        .instr(instr), 
-        .halted(halted), 
-        .jtype(jtype), 
-        .is_beq(is_beq), 
-        .is_lw(is_lw), 
-        .is_sw(is_sw),
-        .alu_use_imm(alu_use_imm),
-        .reg_write_en(reg_write_en), 
-        .alu_op(alu_op)
-    );
     registers registers_comp(
         .rs(rs), 
         .rt(rt), 
@@ -172,17 +179,17 @@ module cpu(
     );
 
     
-    // always @(posedge MAX10_CLK1_50) begin
-    //     clk_divided_count += 1;
-    //     state = next_state;
+    always @(posedge MAX10_CLK1_50) begin
+        clk_divided_count += 1;
+        // state = next_state;
 
-    //     case(state)
-    //         `STATE_RUNNING:
-    //         `STATE_RESET:
-    //         `STATE_LOAD_FIRST_BYTE:
-    //         `STATE_LOAD_SECOND_BYTE:
-    //     endcase
-    // end
+        // case(state)
+        //     `STATE_RUNNING:
+        //     `STATE_RESET:
+        //     `STATE_LOAD_FIRST_BYTE:
+        //     `STATE_LOAD_SECOND_BYTE:
+        // endcase
+    end
 
     // always @(posedge uart_byte_ready) begin
     //     if (~uart_received_first_byte) begin
@@ -198,6 +205,7 @@ module cpu(
     // end
 
     always @(posedge cpu_clk, negedge rst) begin
+        // $display("posedge clk");
         if (~rst) begin 
             pc = 0;
 
@@ -212,6 +220,14 @@ module cpu(
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
+
+
+            // need to make sure word is clocked into mem following the sw instruction
+            // to give time for alu to output the right value
+            if (mem_write_en) mem_write_en = 0;
+            if (is_sw) begin
+                mem_write_en = 1;
+            end
         end
     end
 endmodule

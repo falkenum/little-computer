@@ -15,26 +15,26 @@ module spi_tb();
         .begin_transaction(spi_begin_transaction)
     );
 
-    initial begin
-        #100;
-        spi_begin_transaction = 0; #10;
-        `ASSERT_EQ (spi_cs, 1);
-        spi_begin_transaction = 1; #100;
-        `ASSERT_EQ (spi_comp.cs, 0);
-        `ASSERT_EQ (spi_comp.state, 1);
-        `ASSERT_EQ (spi_comp.delay_finished, 0);
-        `ASSERT_EQ (spi_comp.delay_finished, 0);
-        `ASSERT_EQ (spi_comp.delay_finished, 1);
-        spi_begin_transaction = 0; #500;
-        `ASSERT_EQ (spi_comp.state, 2);
-    end
+    // initial begin
+    //     #100;
+    //     spi_begin_transaction = 0; #10;
+    //     `ASSERT_EQ (spi_cs, 1);
+    //     spi_begin_transaction = 1; #100;
+    //     `ASSERT_EQ (spi_comp.cs, 0);
+    //     `ASSERT_EQ (spi_comp.state, 1);
+    //     `ASSERT_EQ (spi_comp.delay_finished, 0);
+    //     `ASSERT_EQ (spi_comp.delay_finished, 0);
+    //     `ASSERT_EQ (spi_comp.delay_finished, 1);
+    //     spi_begin_transaction = 0; #500;
+    //     `ASSERT_EQ (spi_comp.state, 2);
+    // end
 
-    always @(negedge spi_sck) begin
-    end
-    initial begin
-        integer i;
-        for (i = 0; i < 100000; i++) begin
-            #1 clk_800k = ~clk_800k;
-        end
-    end
+    // always @(negedge spi_sck) begin
+    // end
+    // initial begin
+    //     integer i;
+    //     for (i = 0; i < 100000; i++) begin
+    //         #1 clk_800k = ~clk_800k;
+    //     end
+    // end
 endmodule
