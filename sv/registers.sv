@@ -17,10 +17,6 @@ module registers(
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
 
-    always @* begin
-        // $display("reg %x: %x; reg %x: %x; reg %x: %x; ", 
-            // rs, rs_val, rt, rt_val, rd, rd_val);
-    end
     always @(posedge clk, negedge rst) begin
         if (~rst) reg_file[0] = 0;
         else if (write_en) begin

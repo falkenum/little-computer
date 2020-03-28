@@ -3,8 +3,7 @@
 `define SEG_DISPLAY_OFF 8'hFF
 
 module cpu(
-
-	//////////// CLOCK //////////
+//////////// clock //////////
 	input 		          		ADC_CLK_10,
 	input 		          		MAX10_CLK1_50,
 	input 		          		MAX10_CLK2_50,
@@ -64,11 +63,13 @@ module cpu(
     reg [`REG_WIDTH-1:0] pc;
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_divided_count = 0;
     reg mem_write_en = 0;
+    reg uart_sr_rst = 1;
+
     wire [`REG_WIDTH-1:0] uart_word_count;
     wire uart_word_ready;
-    wire [`WORD_WIDTH-1:0] uart_data_word;
+    wire [`WORD_WIDTH-1:0] uart_word;
     wire uart_rx, uart_byte_ready;
-    wire [7:0] uart_data_byte;
+    wire [7:0] uart_byte;
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
     wire is_lw, is_sw, clk_800k, cpu_clk, rst;
     wire [`INSTR_WIDTH-1:0] instr;
@@ -111,11 +112,20 @@ module cpu(
 
     assign uart_rx = GPIO[8];
 
-    uart_rx uart_comp(
+    uart_sr uart_sr_comp(
+        .uart_byte_ready(uart_byte_ready),
+        .uart_byte(uart_byte),
+        .rst(uart_sr_rst),
+        .uart_word_ready(uart_word_ready),
+        .uart_word_count(uart_word_count),
+        .uart_word(uart_word)
+    );
+
+    uart_rx uart_rx_comp(
         // green wire
         .rx(uart_rx),
         .clk_50M(MAX10_CLK1_50),
-        .data(uart_data_byte),
+        .data(uart_byte),
         .data_ready(uart_byte_ready)
     );
 
@@ -124,9 +134,9 @@ module cpu(
     end
 
     memory memory_comp(
-        .data_addr(load_en ? uart_load_counter : alu_out),
+        .data_addr(load_en ? uart_word_count : alu_out),
         .pc(pc),
-        .data_in(load_en ? uart_data_word : rd_val),
+        .data_in(load_en ? uart_word : rd_val),
         .clk(load_en ? uart_word_ready : cpu_clk),
         .write_en(mem_write_en),
         .instr(instr),
@@ -179,42 +189,21 @@ module cpu(
     );
 
     
-    always @(posedge MAX10_CLK1_50) begin
-        clk_divided_count += 1;
-        // state = next_state;
-
-        // case(state)
-        //     `STATE_RUNNING:
-        //     `STATE_RESET:
-        //     `STATE_LOAD_FIRST_BYTE:
-        //     `STATE_LOAD_SECOND_BYTE:
-        // endcase
+    always @(posedge MAX10_CLK1_50, negedge rst) begin
+        if ~(rst) begin
+            clk_divided_count = 0;
+            uart_sr_rst = 0;
+        end
+        else begin
+            clk_divided_count += 1;
+            uart_sr_rst = 1;
+        end
     end
-
-    // always @(posedge uart_byte_ready) begin
-    //     if (~uart_received_first_byte) begin
-    //         uart_data_word <= {8'b0, uart_data_byte};
-    //         uart_received_first_byte <= 1;
-    //         uart_word_ready <= 0;
-    //     end
-    //     else begin
-    //         uart_data_word <= {uart_data_byte, uart_data_word[7:0]};
-    //         uart_received_first_byte <= 0;
-    //         uart_word_ready <= 1;
-    //     end
-    // end
 
     always @(posedge cpu_clk, negedge rst) begin
         // $display("posedge clk");
         if (~rst) begin 
             pc = 0;
-
-            // if (uart_word_ready) begin
-            //     mem[uart_load_counter] = uart_data_word;
-            //     uart_load_counter += 1;
-            //     if (uart_load_counter == `MEM_LEN) 
-            //         uart_load_counter = 0;
-            // end
         end
         else begin
             pc = halted ? pc : 
@@ -227,6 +216,39 @@ module cpu(
             if (mem_write_en) mem_write_en = 0;
             if (is_sw) begin
                 mem_write_en = 1;
+            end
+        end
+    end
+endmodule
+
+
+module uart_sr(
+    input uart_byte_ready,
+    input [7:0] uart_byte,
+    input rst,
+    output reg uart_word_ready,
+    output reg [`WORD_WIDTH-1:0] uart_word,
+    output reg [`WORD_WIDTH-1:0] uart_word_count
+);
+    reg clocked_first_byte = 0;
+
+    always @(posedge uart_byte_ready, negedge rst) begin
+        if (~rst) begin
+            uart_word_count = 0;
+            uart_word_ready = 0;
+            clocked_first_byte = 0;
+        end
+        else begin
+            if (clocked_first_byte) begin
+                uart_word = {uart_byte, uart_word[7:0]};
+                clocked_first_byte = 0;
+                uart_word_ready = 1;
+            end
+            else begin
+                uart_word = {8'b0, uart_byte};
+                clocked_first_byte = 1;
+                uart_word_ready = 0;
+                uart_word_count += 1;
             end
         end
     end
