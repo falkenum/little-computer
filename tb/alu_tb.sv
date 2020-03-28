@@ -3,11 +3,11 @@
 `timescale 1 ns / 1 ps
 module alu_tb;
     reg [`ALU_OP_WIDTH-1:0] op = `ALU_OP_ADD;
-    reg [`REG_WIDTH-1:0] rs_val = 0;
-    reg [`REG_WIDTH-1:0] rt_val = 0;
-    wire [`REG_WIDTH-1:0] result;
+    reg [`WORD_WIDTH-1:0] rs_val = 0;
+    reg [`WORD_WIDTH-1:0] rt_val = 0;
+    wire [`WORD_WIDTH-1:0] result;
 
-    alu alu_comp(op, rs_val, rt_val, result);
+    alu alu_c(op, rs_val, rt_val, result);
 
     initial begin
         rs_val = 2; #10;

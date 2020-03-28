@@ -1,11 +1,11 @@
 `ifndef DEFS_VH
 `define DEFS_VH
 
+`define SEG_DISPLAY_OFF 8'hFF
+
 `define ALU_OP_WIDTH 2
 `define WORD_WIDTH 16
 `define CPU_CLK_DIV_WIDTH 6
-`define REG_WIDTH `WORD_WIDTH
-`define INSTR_WIDTH `WORD_WIDTH
 `define NUM_REGS_WIDTH 3
 `define NUM_REGS (1 << `NUM_REGS_WIDTH)
 `define IMM_WIDTH 6

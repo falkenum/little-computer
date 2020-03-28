@@ -2,7 +2,7 @@
 
 module display(
     input enable,
-    input [`INSTR_WIDTH-1:0] instr,
+    input [`WORD_WIDTH-1:0] instr,
     input [7:0] pc,
     output [5:0][7:0] hex
 );

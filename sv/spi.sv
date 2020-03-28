@@ -10,7 +10,7 @@ module spi(
     input clk_800k,
     input begin_transaction,
     input rst,
-    // input [`REG_WIDTH-1:0] transaction_length,
+    // input [`WORD_WIDTH-1:0] transaction_length,
     output sck,
     // output mosi,
     output reg cs,

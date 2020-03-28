@@ -2,9 +2,9 @@
 
 module alu(
     input [`ALU_OP_WIDTH-1:0] op,
-    input [`REG_WIDTH-1:0] rs_val,
-    input [`REG_WIDTH-1:0] rt_val,
-    output logic [`REG_WIDTH-1:0] result
+    input [`WORD_WIDTH-1:0] rs_val,
+    input [`WORD_WIDTH-1:0] rt_val,
+    output logic [`WORD_WIDTH-1:0] result
 );
 
     always @* begin

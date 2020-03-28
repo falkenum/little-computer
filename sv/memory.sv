@@ -1,13 +1,13 @@
 `include "defs.vh"
 
 module memory(
-    input [`REG_WIDTH-1:0] data_addr,
-    input [`REG_WIDTH-1:0] pc,
-    input [`REG_WIDTH-1:0] data_in,
+    input [`WORD_WIDTH-1:0] data_addr,
+    input [`WORD_WIDTH-1:0] pc,
+    input [`WORD_WIDTH-1:0] data_in,
     input clk,
     input write_en,
-    output [`REG_WIDTH-1:0] instr,
-    output [`REG_WIDTH-1:0] data_out
+    output [`WORD_WIDTH-1:0] instr,
+    output [`WORD_WIDTH-1:0] data_out
 );
     reg [`WORD_WIDTH-1:0] mem [`MEM_LEN];
 
