@@ -1,6 +1,7 @@
 .*.sw[op]
 *.exe
 *.mem
+*.rom
 *~
 *.bak
 \#*

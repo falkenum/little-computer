@@ -68,7 +68,6 @@ module cpu(
     reg [`REG_WIDTH-1:0] pc;
     reg [`INSTR_WIDTH-1:0] mem [`MEM_LEN];
     reg [5:0] clk_divided_count = 0;
-    reg [`MEM_LEN_WIDTH-1:0] load_counter = 0;
 
     wire jtype, halted, reg_write_en, alu_use_imm, is_beq, regs_equal, beq_taken;
     wire is_lw, is_sw, clk_800k, cpu_clk, rst;
@@ -81,7 +80,7 @@ module cpu(
     wire debug_mode = SW[0];
     // assign LEDR = {6'b0, MAX10_CLK1_50, clk_800k, GSENSOR_SCLK, KEY[0]};
 
-    assign GPIO[7:0] = {spi_cs, spi_mosi, spi_miso, spi_sck, spi_begin_transaction, spi_state, rst};
+    assign GPIO[7:0] = {uart_clk, uart_state[1], uart_state[0], uart_data_ready, uart_rx, MAX10_CLK1_50, 2'b0};
     assign GSENSOR_SCLK = scl_r;
     assign GSENSOR_SDI = sda_r;
     assign clk_800k = clk_divided_count[5];
@@ -103,28 +102,46 @@ module cpu(
 	// primary address mode, 0x1D is the address
 	assign GSENSOR_SDO = 1;
 
-    wire spi_sck, spi_miso, spi_mosi, spi_cs, spi_begin_transaction;
-    wire [1:0] spi_state;
-    reg [`REG_WIDTH-1:0] spi_transaction_length = 1 << 8;
-    assign spi_begin_transaction = ~KEY[1];
-    assign ARDUINO_IO[13] = spi_sck;
-    assign spi_miso = ARDUINO_IO[12];
-    assign ARDUINO_IO[10] = spi_cs;
-    spi spi_comp(
-        .clk_800k(clk_800k),
-        .sck(spi_sck),
-        .miso(spi_miso),
-        .rst(rst),
-        // .mosi(ARDUINO_IO[11]),
-        .cs(spi_cs),
-        .begin_transaction(spi_begin_transaction),
-        // .transaction_length(spi_transaction_length),
-        .state_out(spi_state)
+    wire uart_rx, uart_data_ready, uart_clk;
+    wire [1:0] uart_state;
+    wire [7:0] uart_data;
+
+    assign uart_rx = GPIO[8];
+    assign GPIO[9] = 0;
+
+    uart_rx uart_comp(
+        .rx(uart_rx),
+        .clk_50M(MAX10_CLK1_50),
+        .data(uart_data),
+        .data_ready(uart_data_ready),
+        .clk_out(uart_clk),
+        .state_out(uart_state)
     );
+
+    // wire spi_sck, spi_miso, spi_mosi, spi_cs, spi_begin_transaction;
+    // wire [1:0] spi_state;
+    // reg [`REG_WIDTH-1:0] spi_transaction_length = 1 << 8;
+    // assign spi_begin_transaction = ~KEY[1];
+    // assign ARDUINO_IO[13] = spi_sck;
+    // assign spi_miso = ARDUINO_IO[12];
+    // assign ARDUINO_IO[10] = spi_cs;
+
+    // spi spi_comp(
+    //     .clk_800k(clk_800k),
+    //     .sck(spi_sck),
+    //     .miso(spi_miso),
+    //     .rst(rst),
+    //     // .mosi(ARDUINO_IO[11]),
+    //     .cs(spi_cs),
+    //     .begin_transaction(spi_begin_transaction),
+    //     // .transaction_length(spi_transaction_length),
+    //     .state_out(spi_state)
+    // );
     display display_comp(
         .enable(debug_mode), 
         .instr(instr), 
-        .pc(pc[7:0]), 
+        // .pc(pc[7:0]), 
+        .pc(uart_data), 
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
     control control_comp(
@@ -185,9 +202,10 @@ module cpu(
         end
     end
 
-    task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
-        pc = 0;
-        $readmemh("as/i2c.mem", mem, 0, 18);
-        // $readmemh(instr_path, mem, 0, num_instr-1);
-    endtask
+    // for simulations
+    // task load_instr(input [`MAX_PATH_LEN*8-1:0] instr_path, input integer num_instr);
+    //     pc = 0;
+    //     // $readmemh("as/i2c.mem", mem, 0, 18);
+    //     $readmemh(instr_path, mem, 0, num_instr-1);
+    // endtask
 endmodule

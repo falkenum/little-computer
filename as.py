@@ -129,8 +129,8 @@ def main():
 
     lines = read_data.split('\n')
 
-    filename = str(Path(sys.argv[1]).with_suffix('.mem'))
-    fout = open(filename, 'w')
+    filename = str(Path(sys.argv[1]).with_suffix('.rom'))
+    fout = open(filename, 'wb')
 
     labels = {}
 
@@ -142,7 +142,8 @@ def main():
             fout.close()
             os.remove(filename)
             raise e
-        fout.write(f"{instr:04X}\n")
+        # fout.write(f"{instr:04X}\n")
+        fout.write(instr.to_bytes(length=2, byteorder='little'))
     fout.close()
 
 if __name__ == '__main__':
