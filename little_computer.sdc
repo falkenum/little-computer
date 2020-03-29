@@ -1,4 +1,4 @@
-## Generated SDC file "little_computer.out.sdc"
+## Generated SDC file "little_computer.sdc"
 
 ## Copyright (C) 2019  Intel Corporation. All rights reserved.
 ## Your use of Intel Corporation's design tools, logic functions 
@@ -20,7 +20,7 @@
 ## PROGRAM "Quartus Prime"
 ## VERSION "Version 19.1.0 Build 670 09/22/2019 SJ Lite Edition"
 
-## DATE    "Sat Mar 28 17:20:43 2020"
+## DATE    "Sun Mar 29 12:45:30 2020"
 
 ##
 ## DEVICE  "10M50DAF484C7G"
@@ -39,7 +39,10 @@ set_time_format -unit ns -decimal_places 3
 # Create Clock
 #**************************************************************
 
+create_clock -name {altera_reserved_tck} -period 100.000 -waveform { 0.000 50.000 } [get_ports {altera_reserved_tck}]
 create_clock -name {MAX10_CLK1_50} -period 20.000 -waveform { 0.000 10.000 } [get_ports {MAX10_CLK1_50}]
+create_clock -name {clk_25M_count} -period 40.000 -waveform { 0.000 20.000 } [get_registers {clk_25M_count}]
+create_clock -name {uart_rx:uart_rx_c|clk} -period 6510.400 -waveform { 0.000 3255.200 } [get_registers {uart_rx:uart_rx_c|clk}]
 
 
 #**************************************************************
@@ -58,10 +61,38 @@ create_clock -name {MAX10_CLK1_50} -period 20.000 -waveform { 0.000 10.000 } [ge
 # Set Clock Uncertainty
 #**************************************************************
 
-set_clock_uncertainty -rise_from [get_clocks {MAX10_CLK1_50}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.020  
-set_clock_uncertainty -rise_from [get_clocks {MAX10_CLK1_50}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {MAX10_CLK1_50}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.020  
-set_clock_uncertainty -fall_from [get_clocks {MAX10_CLK1_50}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {altera_reserved_tck}] -rise_to [get_clocks {altera_reserved_tck}]  0.040  
+set_clock_uncertainty -rise_from [get_clocks {altera_reserved_tck}] -fall_to [get_clocks {altera_reserved_tck}]  0.040  
+set_clock_uncertainty -fall_from [get_clocks {altera_reserved_tck}] -rise_to [get_clocks {altera_reserved_tck}]  0.040  
+set_clock_uncertainty -fall_from [get_clocks {altera_reserved_tck}] -fall_to [get_clocks {altera_reserved_tck}]  0.040  
+set_clock_uncertainty -rise_from [get_clocks {MAX10_CLK1_50}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.060  
+set_clock_uncertainty -rise_from [get_clocks {MAX10_CLK1_50}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.060  
+set_clock_uncertainty -fall_from [get_clocks {MAX10_CLK1_50}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.060  
+set_clock_uncertainty -fall_from [get_clocks {MAX10_CLK1_50}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.060  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -rise_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {clk_25M_count}] -fall_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -rise_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {MAX10_CLK1_50}]  0.030  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {clk_25M_count}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -rise_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
+set_clock_uncertainty -fall_from [get_clocks {uart_rx:uart_rx_c|clk}] -fall_to [get_clocks {uart_rx:uart_rx_c|clk}]  0.020  
 
 
 #**************************************************************
@@ -80,6 +111,8 @@ set_clock_uncertainty -fall_from [get_clocks {MAX10_CLK1_50}] -fall_to [get_cloc
 # Set Clock Groups
 #**************************************************************
 
+set_clock_groups -asynchronous -group [get_clocks {altera_reserved_tck}] 
+set_clock_groups -asynchronous -group [get_clocks {altera_reserved_tck}] 
 
 
 #**************************************************************

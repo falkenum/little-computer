@@ -1,92 +1,111 @@
 `include "defs.vh"
 
-`define STATE_FIRST_BYTE 0
-`define STATE_WAIT 1
-`define STATE_SECOND_BYTE 2
-`define STATE_WORD_READY 3
-`define STATE_INC 4
-
-`define WAIT_TIME 23'h1000000
+`define STATE_IDLE 0
+`define STATE_FIRST_BYTE 1
+`define STATE_WAIT 2
+`define STATE_SECOND_BYTE 3
+`define STATE_WORD_READY 4
+`define STATE_INC 5
 
 module uart_sr(
     input uart_byte_ready,
     input [7:0] uart_byte,
     input rst,
     input clk,
-    output reg uart_word_ready,
     output reg [`WORD_WIDTH-1:0] uart_word,
-    output reg [`WORD_WIDTH-1:0] uart_word_count,
-
-    // TODO delete
-    output [2:0] state_out,
-    output clocked_first_byte_out,
-    output clocked_second_byte_out
+    output reg uart_word_ready
 );
-    assign clocked_first_byte_out = clocked_first_byte;
-    assign clocked_second_byte_out = clocked_second_byte;
-    assign state_out = state;
 
-    reg clocked_first_byte = 0, clocked_second_byte = 0;
-    reg [2:0] state = `STATE_FIRST_BYTE, next_state = `STATE_FIRST_BYTE;
-    reg [22:0] wait_count = 1;
+    // reg [2:0] state = `STATE_IDLE;
+    reg clocked_first_byte = 0, uart_word_loaded = 0;
+    reg [3:0] byte_ready_vals = 0;
 
-    always @*
-    case(state)
-        `STATE_FIRST_BYTE:
-            if (clocked_first_byte) next_state = `STATE_WAIT;
-            else next_state = state;
-        // need to wait to make sure uart_byte_ready goes down
-        `STATE_WAIT:
-            if (wait_count >= `WAIT_TIME) next_state = `STATE_SECOND_BYTE;
-            else next_state = state;
-        `STATE_SECOND_BYTE:
-            if (clocked_second_byte) next_state = `STATE_WORD_READY;
-            else next_state = state;
-        `STATE_WORD_READY:
-            if (uart_word_ready) next_state = `STATE_INC;
-            else next_state = state;
-        `STATE_INC:
-            next_state = `STATE_FIRST_BYTE;
-        default: next_state = `STATE_FIRST_BYTE;
-    endcase
+    // function [2:0] next_state_func(state);
+    //     case(state)
+    //         `STATE_IDLE: next_state_func = `STATE_FIRST_BYTE;
+    //         `STATE_FIRST_BYTE: 
+    //             if (clocked_first_byte) next_state_func = `STATE_WAIT;
+    //             else next_state_func = state;
+    //         `STATE_WAIT:
+    //             // if (ready_for_second_byte) next_state_func = `STATE_SECOND_BYTE;
+    //             next_state_func = state;
+    //         // `STATE_SECOND_BYTE:
+    //         //     if (clocked_second_byte) next_state_func = `STATE_WORD_READY;
+    //         //     else next_state_func = state;
+    //         // `STATE_WORD_READY:
+    //         //     if (uart_word_ready) next_state_func = `STATE_INC;
+    //         //     else next_state_func = state;
+    //         // `STATE_INC:
+    //         //     next_state_func = `STATE_IDLE;
+    //         default: next_state_func = `STATE_IDLE;
+    //     endcase
+    // endfunction
 
-    always @(posedge clk, negedge rst) begin
-        state = next_state;
+    always @(posedge clk) begin
         if (~rst) begin
-            uart_word_count = 0;
-            state = `STATE_FIRST_BYTE;
-            uart_word_ready = 0;
+            // state = `STATE_IDLE;
             clocked_first_byte = 0;
-            clocked_second_byte = 0;
+            uart_word_ready = 0;
+            uart_word_loaded = 0;
+            byte_ready_vals = 4'hf;
         end
-        else
-        case(state)
-            `STATE_FIRST_BYTE: begin
-                uart_word_ready = 0;
-                wait_count = 0;
+        // else state = next_state_func(state);
 
-                if (uart_byte_ready) begin
-                    uart_word = {8'b0, uart_byte};
+        else
+        begin
+            if (byte_ready_vals[3] == 0 & byte_ready_vals [2:0] == 3'b111) begin
+                if (~clocked_first_byte) begin
+                    uart_word = {uart_word[15:8], uart_byte};
                     clocked_first_byte = 1;
-                end
-            end
-            `STATE_WAIT: begin
-                if (wait_count < `WAIT_TIME) wait_count += 1;
-            end
-            `STATE_SECOND_BYTE: begin
-                if (uart_byte_ready) begin
+                end else begin
                     uart_word = {uart_byte, uart_word[7:0]};
-                    clocked_second_byte = 1;
+                    uart_word_loaded = 1;
                 end
-            end
-            `STATE_WORD_READY: begin
+            end else if (uart_word_loaded) begin
                 uart_word_ready = 1;
-            end
-            `STATE_INC: begin
-                clocked_second_byte = 0;
+                uart_word_loaded = 0;
                 clocked_first_byte = 0;
-                uart_word_count += 1;
+            end else if (uart_word_ready) begin
+                uart_word_ready = 0;
             end
-        endcase
+
+            byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};
+        end
+
+        // case(state)
+        //     `STATE_IDLE: begin
+        //         clocked_first_byte = 0;
+        //         clocked_second_byte = 0;
+        //         uart_word_ready = 0;
+        //         ready_for_second_byte = 0;
+        //         byte_ready_vals = 0;
+        //     end
+        //     `STATE_FIRST_BYTE: begin
+        //         if (byte_ready_vals[3] == 0 & byte_ready_vals [2:0] == 3'b111) begin
+        //             uart_word = {uart_word[15:8], uart_byte};
+        //             clocked_first_byte = 1;
+        //         end
+        //         byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};
+        //     end
+        //     `STATE_WAIT: begin
+        //         if (byte_ready_vals[3] == 1 & byte_ready_vals [2:0] == 3'b0) begin
+        //             ready_for_second_byte = 1;
+        //         end
+        //         byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};
+        //     end
+            // `STATE_SECOND_BYTE: begin
+            //     if (byte_ready_vals[3] == 0 & byte_ready_vals [2:0] == 3'b111) begin
+            //         uart_word = {uart_byte, uart_word[7:0]};
+            //         clocked_second_byte = 1;
+            //     end
+            //     byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};
+            // end
+            // `STATE_WORD_READY: begin
+            //     uart_word_ready = 1;
+            // end
+            // `STATE_INC: begin
+            //     uart_word_count += 1;
+            // end
+        // endcase
     end
 endmodule

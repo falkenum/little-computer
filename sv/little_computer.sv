@@ -57,11 +57,12 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
 
-    assign GPIO[7:0] = {uart_byte_ready, uart_word_ready, uart_rx, 
-        uart_sr_state_out, uart_clocked_first_byte_out, uart_clocked_second_byte_out};
+    assign GPIO[7:0] = {uart_word_ready, uart_byte_ready, uart_rx, uart_word_count[4:0]};
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
     reg clk_25M_count = 0;
+    reg [`WORD_WIDTH-1:0] uart_word_count = 0;
+    reg [1:0] uart_word_ready_vals = 2'b11;
     // reg [1:0] uart_sr_rst_inv = 0;
 
     wire clk_25M = clk_25M_count;
@@ -75,23 +76,17 @@ module little_computer(
     wire cpu_rst = sysrst & ~load_en;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en;
-    wire [`WORD_WIDTH-1:0] uart_word_count, uart_word, 
+    wire [`WORD_WIDTH-1:0] uart_word, 
         memory_data_out, instr, pc, cpu_data_out, cpu_data_addr;
     wire [7:0] uart_byte;
 
-    wire [2:0] uart_sr_state_out;
-    wire uart_clocked_first_byte_out, uart_clocked_second_byte_out;
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
         .uart_byte(uart_byte),
         .rst(sysrst),
         .clk(clk_25M),
         .uart_word_ready(uart_word_ready),
-        .uart_word_count(uart_word_count),
-        .uart_word(uart_word),
-        .state_out(uart_sr_state_out),
-        .clocked_first_byte_out(uart_clocked_first_byte_out),
-        .clocked_second_byte_out(uart_clocked_second_byte_out)
+        .uart_word(uart_word)
     );
 
     uart_rx uart_rx_c(
@@ -129,16 +124,22 @@ module little_computer(
         .mem_write_en(cpu_mem_write_en)
     );
 
-
-    always @(posedge sysclk, negedge sysrst) begin
+    always @(posedge sysclk) begin
         if (~sysrst) begin
             clk_800k_count = 0;
             clk_25M_count = 0;
+            uart_word_count = 0;
         end
         else begin
             clk_800k_count += 1;
             clk_25M_count += 1;
         end
+
+        // inc counter on negedge of uart_word_ready
+        if (uart_word_ready_vals[1] == 1 && uart_word_ready_vals[0] == 0) begin
+            uart_word_count += 1;
+        end
+        uart_word_ready_vals = {uart_word_ready_vals[0], uart_word_ready};
     end
 
 endmodule

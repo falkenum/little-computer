@@ -20,6 +20,8 @@ module uart_rx(
 
     always @(posedge clk_25M) begin
         clk_25M_count += 1;
+
+        // 81 is the value to turn 25MHz into 9600 baud * 16
         if (clk_25M_count >= 81) begin
             clk = ~clk;
             clk_25M_count = 0;
