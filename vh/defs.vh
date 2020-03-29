@@ -10,7 +10,7 @@
 `define NUM_REGS (1 << `NUM_REGS_WIDTH)
 `define IMM_WIDTH 6
 `define JIMM_WIDTH 12
-`define MEM_LEN_WIDTH 8
+`define MEM_LEN_WIDTH 5
 `define MEM_LEN (1 << `MEM_LEN_WIDTH)
 `define OP_WIDTH 4
 

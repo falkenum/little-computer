@@ -1,28 +1,27 @@
 `include "defs.vh"
 
 module display(
-    input enable,
-    input [`WORD_WIDTH-1:0] instr,
-    input [7:0] pc,
+    input debug_en,
+    input [23:0] value,
     output [5:0][7:0] hex
 );
-    segdisplay seg0(~enable, 1'b0, pc[3:0], hex[0]);
-    segdisplay seg1(~enable, 1'b0, pc[7:4], hex[1]);
-    segdisplay seg2(~enable, 1'b1, instr[3:0], hex[2]);
-    segdisplay seg3(~enable, 1'b0, instr[7:4], hex[3]);
-    segdisplay seg4(~enable, 1'b0, instr[11:8], hex[4]);
-    segdisplay seg5(~enable, 1'b0, instr[15:12], hex[5]);
+    segdisplay seg0(debug_en, 1'b0, value[3:0], hex[0]);
+    segdisplay seg1(debug_en, 1'b0, value[7:4], hex[1]);
+    segdisplay seg2(debug_en, 1'b1, value[11:8], hex[2]);
+    segdisplay seg3(debug_en, 1'b0, value[15:12], hex[3]);
+    segdisplay seg4(debug_en, 1'b0, value[19:16], hex[4]);
+    segdisplay seg5(debug_en, 1'b0, value[23:20], hex[5]);
 
 endmodule
 
 module segdisplay(
-    input turn_off,
+    input enable,
     input dp,
     input [3:0] num,
     output reg [7:0] segments
 );
     always @*
-        if (turn_off) segments <= 8'hff;
+        if (~enable) segments <= 8'hff;
         else case (num)
             'h0: segments <= {~dp, 7'b1000000};
             'h1: segments <= {~dp, 7'b1111001};

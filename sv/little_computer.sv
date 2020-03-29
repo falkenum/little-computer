@@ -59,17 +59,19 @@ module little_computer(
 
     assign GPIO[7:0] = {8'b0};
 
-    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_divided_count = 0;
+    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
+    // reg [1:0] uart_sr_rst_inv = 0;
 
+    wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
-    wire rst = KEY[0];
+    wire sysrst = KEY[0];
     wire debug_mode = SW[0];
     wire load_en = SW[1];
-    wire clk_800k = clk_divided_count[5];
+    wire clk_800k = clk_800k_count[5];
     wire cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
-    wire cpu_rst = rst & ~load_en;
+    wire cpu_rst = sysrst & ~load_en;
 
-    wire uart_byte_ready, uart_word_ready, mem_write_en;
+    wire uart_byte_ready, uart_word_ready, cpu_mem_write_en;
     wire [`WORD_WIDTH-1:0] uart_word_count, uart_word, 
         memory_data_out, instr, pc, cpu_data_out, cpu_data_addr;
     wire [7:0] uart_byte;
@@ -77,7 +79,8 @@ module little_computer(
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
         .uart_byte(uart_byte),
-        .rst(rst),
+        .rst(sysrst),
+        .clk(sysclk),
         .uart_word_ready(uart_word_ready),
         .uart_word_count(uart_word_count),
         .uart_word(uart_word)
@@ -92,10 +95,8 @@ module little_computer(
     );
 
     display display_c(
-        .enable(debug_mode), 
-        .instr(instr), 
-        .pc(pc[7:0]), 
-        // .pc(uart_data), 
+        .debug_en(debug_mode), 
+        .value({instr, pc[7:0]}),
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
 
@@ -104,7 +105,7 @@ module little_computer(
         .pc(pc),
         .data_in(load_en ? uart_word : cpu_data_out),
         .clk(load_en ? uart_word_ready : cpu_clk),
-        .write_en(mem_write_en),
+        .write_en(load_en | cpu_mem_write_en),
         .instr(instr),
         .data_out(memory_data_out)
     );
@@ -117,15 +118,16 @@ module little_computer(
         .pc(pc),
         .data_addr(cpu_data_addr),
         .data_out(cpu_data_out),
-        .mem_write_en(mem_write_en)
+        .mem_write_en(cpu_mem_write_en)
     );
 
-    always @(posedge MAX10_CLK1_50, negedge rst) begin
-        if (~rst) begin
-            clk_divided_count = 0;
+
+    always @(posedge sysclk, negedge sysrst) begin
+        if (~sysrst) begin
+            clk_800k_count = 0;
         end
         else begin
-            clk_divided_count += 1;
+            clk_800k_count += 1;
         end
     end
 
