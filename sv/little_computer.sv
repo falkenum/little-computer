@@ -57,11 +57,14 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
 
-    assign GPIO[7:0] = {8'b0};
+    assign GPIO[7:0] = {uart_byte_ready, uart_word_ready, uart_rx, 
+        uart_sr_state_out, uart_clocked_first_byte_out, uart_clocked_second_byte_out};
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
+    reg clk_25M_count = 0;
     // reg [1:0] uart_sr_rst_inv = 0;
 
+    wire clk_25M = clk_25M_count;
     wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
     wire sysrst = KEY[0];
@@ -76,20 +79,25 @@ module little_computer(
         memory_data_out, instr, pc, cpu_data_out, cpu_data_addr;
     wire [7:0] uart_byte;
 
+    wire [2:0] uart_sr_state_out;
+    wire uart_clocked_first_byte_out, uart_clocked_second_byte_out;
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
         .uart_byte(uart_byte),
         .rst(sysrst),
-        .clk(sysclk),
+        .clk(clk_25M),
         .uart_word_ready(uart_word_ready),
         .uart_word_count(uart_word_count),
-        .uart_word(uart_word)
+        .uart_word(uart_word),
+        .state_out(uart_sr_state_out),
+        .clocked_first_byte_out(uart_clocked_first_byte_out),
+        .clocked_second_byte_out(uart_clocked_second_byte_out)
     );
 
     uart_rx uart_rx_c(
         // green wire
         .rx(uart_rx),
-        .clk_50M(MAX10_CLK1_50),
+        .clk_25M(clk_25M),
         .data(uart_byte),
         .data_ready(uart_byte_ready)
     );
@@ -125,9 +133,11 @@ module little_computer(
     always @(posedge sysclk, negedge sysrst) begin
         if (~sysrst) begin
             clk_800k_count = 0;
+            clk_25M_count = 0;
         end
         else begin
             clk_800k_count += 1;
+            clk_25M_count += 1;
         end
     end
 

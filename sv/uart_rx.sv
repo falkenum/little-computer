@@ -7,22 +7,22 @@
 
 module uart_rx(
     input rx,
-    input clk_50M,
+    input clk_25M,
     output reg [7:0] data,
     output reg data_ready
 );
     reg [7:0] data_write;
-    reg [7:0] clk_50M_count = 0;
+    reg [7:0] clk_25M_count = 0;
     reg [5:0] sync_count = 0;
     reg clk = 0;
     reg receiving = 0, clock_synced = 0, stop_clocked = 0;
     reg [1:0] state = `STATE_IDLE, next_state = `STATE_IDLE;
 
-    always @(posedge clk_50M) begin
-        clk_50M_count += 1;
-        if (clk_50M_count >= 162) begin
+    always @(posedge clk_25M) begin
+        clk_25M_count += 1;
+        if (clk_25M_count >= 81) begin
             clk = ~clk;
-            clk_50M_count = 0;
+            clk_25M_count = 0;
         end
     end
 
@@ -48,10 +48,10 @@ module uart_rx(
         case (state)
             `STATE_IDLE: begin
                 if (rx === 0) begin 
+                    data_ready = 0;
                     receiving = 1;
                     stop_clocked = 0;
                     clock_synced = 0;
-                    data_ready = 0;
                     data_write = 1;
                 end
             end
