@@ -16,7 +16,7 @@ module lc_tb;
     endtask
 
     task load_instr(string filename, integer length);
-        $readmemh(filename, lc_c.memory_c.mem, 0, length - 1);
+        $readmemh(filename, lc_c.cpu_mem_c.mem, 0, length - 1);
         RST = 1; #10;
         RST = 0; #10;
         RST = 1; #10;
@@ -91,14 +91,14 @@ module lc_tb;
             //     lc_c.cpu_c.pc,
             //     lc_c.cpu_c.registers_c.reg_file[1],
             //     lc_c.cpu_c.registers_c.reg_file[2],
-            //     lc_c.cpu_c.memory_c.mem[31],
+            //     lc_c.cpu_c.cpu_mem_c.mem[31],
             //     lc_c.cpu_c.is_sw
             // );
         end
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h6001);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h6002);
-        `ASSERT_EQ(lc_c.memory_c.mem[31], 'h6002);
+        `ASSERT_EQ(lc_c.cpu_mem_c.mem[31], 'h6002);
     end
 endmodule
 

@@ -60,12 +60,10 @@ module little_computer(
     assign GPIO[7:0] = {uart_word_ready, uart_byte_ready, uart_rx, uart_word_count[4:0]};
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
-    reg clk_25M_count = 0;
     reg [`WORD_WIDTH-1:0] uart_word_count = 0;
     reg [1:0] uart_word_ready_vals = 2'b11;
-    // reg [1:0] uart_sr_rst_inv = 0;
+    reg [1:0] load_en_vals = 2'b11;
 
-    wire clk_25M = clk_25M_count;
     wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
     wire sysrst = KEY[0];
@@ -84,7 +82,7 @@ module little_computer(
         .uart_byte_ready(uart_byte_ready),
         .uart_byte(uart_byte),
         .rst(sysrst),
-        .clk(clk_25M),
+        .clk(sysclk),
         .uart_word_ready(uart_word_ready),
         .uart_word(uart_word)
     );
@@ -92,7 +90,7 @@ module little_computer(
     uart_rx uart_rx_c(
         // green wire
         .rx(uart_rx),
-        .clk_25M(clk_25M),
+        .clk(sysclk),
         .data(uart_byte),
         .data_ready(uart_byte_ready)
     );
@@ -103,7 +101,7 @@ module little_computer(
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
 
-    memory memory_c(
+    cpu_mem cpu_mem_c(
         .data_addr(load_en ? uart_word_count : cpu_data_addr),
         .pc(pc),
         .data_in(load_en ? uart_word : cpu_data_out),
@@ -127,12 +125,10 @@ module little_computer(
     always @(posedge sysclk) begin
         if (~sysrst) begin
             clk_800k_count = 0;
-            clk_25M_count = 0;
             uart_word_count = 0;
         end
         else begin
             clk_800k_count += 1;
-            clk_25M_count += 1;
         end
 
         // inc counter on negedge of uart_word_ready
@@ -140,6 +136,12 @@ module little_computer(
             uart_word_count += 1;
         end
         uart_word_ready_vals = {uart_word_ready_vals[0], uart_word_ready};
+
+        // reset word count on positive edge of load en
+        if (load_en_vals[1] == 0 && load_en_vals[0] == 1) begin
+            uart_word_count = 0;
+        end
+        load_en_vals = {load_en_vals[0], load_en};
     end
 
 endmodule

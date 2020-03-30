@@ -1,6 +1,6 @@
 `include "defs.vh"
 
-module memory(
+module cpu_mem(
     input [`WORD_WIDTH-1:0] data_addr,
     input [`WORD_WIDTH-1:0] pc,
     input [`WORD_WIDTH-1:0] data_in,

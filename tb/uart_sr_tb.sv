@@ -6,7 +6,7 @@ module uart_sr_tb();
     reg uart_byte_ready = 0, rst = 1, clk = 0;
     reg [7:0] uart_byte = 0;
     wire uart_word_ready;
-    wire [`WORD_WIDTH-1:0] uart_word, uart_word_count;
+    wire [`WORD_WIDTH-1:0] uart_word;
 
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
@@ -14,7 +14,6 @@ module uart_sr_tb();
         .rst(rst),
         .clk(clk),
         .uart_word_ready(uart_word_ready),
-        .uart_word_count(uart_word_count),
         .uart_word(uart_word)
     );
 

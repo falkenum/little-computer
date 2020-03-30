@@ -5,26 +5,27 @@
 `define STATE_DATA 2
 `define STATE_STOP 3
 
-module uart_rx(
+// 325 is the value to turn 50MHz into 9600 baud * 16
+// 325 = 50000000/(9600*16)
+module uart_rx #(parameter clks_per_bit = 325) (
     input rx,
-    input clk_25M,
+    input clk,
     output reg [7:0] data,
     output reg data_ready
 );
     reg [7:0] data_write;
-    reg [7:0] clk_25M_count = 0;
+    reg [7:0] clk_count = 0;
     reg [5:0] sync_count = 0;
-    reg clk = 0;
+    reg clk_baud = 0;
     reg receiving = 0, clock_synced = 0, stop_clocked = 0;
     reg [1:0] state = `STATE_IDLE, next_state = `STATE_IDLE;
 
-    always @(posedge clk_25M) begin
-        clk_25M_count += 1;
+    always @(posedge clk) begin
+        clk_count += 1;
 
-        // 81 is the value to turn 25MHz into 9600 baud * 16
-        if (clk_25M_count >= 81) begin
-            clk = ~clk;
-            clk_25M_count = 0;
+        if (clk_count >= clks_per_bit >> 1) begin
+            clk_baud = ~clk_baud;
+            clk_count = 0;
         end
     end
 
@@ -44,7 +45,7 @@ module uart_rx(
             else next_state = state;
     endcase
 
-    always @(posedge clk) begin
+    always @(posedge clk_baud) begin
         state = next_state;
         if (receiving) sync_count += 1;
         case (state)
