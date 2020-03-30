@@ -6,18 +6,20 @@ module cpu_mem(
     input [`WORD_WIDTH-1:0] data_in,
     input clk,
     input write_en,
-    output [`WORD_WIDTH-1:0] instr,
-    output [`WORD_WIDTH-1:0] data_out
+    output reg [`WORD_WIDTH-1:0] instr,
+    output reg [`WORD_WIDTH-1:0] data_out
+
+
 );
     reg [`WORD_WIDTH-1:0] mem [`MEM_LEN];
 
-    assign instr = mem[pc];
-    assign data_out = mem[data_addr];
     always @(posedge clk) begin
         // $display("memory clocked");
         if (write_en) begin
             // $display("writing %x to addr %x", data_in, data_addr);
             mem[data_addr] <= data_in;
         end 
+        data_out <= mem[data_addr];
+        instr <= mem[pc];
     end
 endmodule

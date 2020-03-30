@@ -57,7 +57,7 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
 
-    assign GPIO[7:0] = {uart_word_ready, uart_byte_ready, uart_rx, uart_word_count[4:0]};
+    assign GPIO[7:0] = {8'b0};
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
     reg [`WORD_WIDTH-1:0] uart_word_count = 0;
@@ -74,9 +74,31 @@ module little_computer(
     wire cpu_rst = sysrst & ~load_en;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en;
-    wire [`WORD_WIDTH-1:0] uart_word, 
+    wire [`WORD_WIDTH-1:0] uart_word, dram_out,
         memory_data_out, instr, pc, cpu_data_out, cpu_data_addr;
     wire [7:0] uart_byte;
+
+    mem_ctl mem_ctl_c(
+        .dram_clk(DRAM_CLK),
+        .dram_cs_n(DRAM_CS_N),
+        .dram_ldqm(DRAM_LDQM),
+        .dram_udqm(DRAM_UDQM),
+        .dram_addr(DRAM_ADDR),
+        .dram_ba(DRAM_BA),
+        .dram_cke(DRAM_CKE),
+        .dram_cas_n(DRAM_CAS_N),
+        .dram_ras_n(DRAM_RAS_N),
+        .dram_we_n(DRAM_WE_N),
+        .dram_dq(DRAM_DQ),
+
+        .rst(sysrst),
+        .clk(sysclk),
+        .write_en(1'b1),
+        .addr(25'b0),
+        .data_in(16'hABCD),
+        .data_out(dram_out)
+
+    );
 
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
@@ -97,7 +119,8 @@ module little_computer(
 
     display display_c(
         .debug_en(debug_mode), 
-        .value({instr, pc[7:0]}),
+        // .value({instr, pc[7:0]}),
+        .value({dram_out, pc[7:0]}),
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
 
