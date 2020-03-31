@@ -24,6 +24,7 @@ module uart_sr(
                 if (~clocked_first_byte) begin
                     uart_word = {uart_word[15:8], uart_byte};
                     clocked_first_byte = 1;
+                    uart_word_ready = 0;
                 end else begin
                     uart_word = {uart_byte, uart_word[7:0]};
                     uart_word_loaded = 1;
@@ -32,8 +33,6 @@ module uart_sr(
                 uart_word_ready = 1;
                 uart_word_loaded = 0;
                 clocked_first_byte = 0;
-            end else if (uart_word_ready) begin
-                uart_word_ready = 0;
             end
 
             byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};

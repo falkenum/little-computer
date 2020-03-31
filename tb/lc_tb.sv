@@ -39,6 +39,7 @@ module lc_tb;
 
         load_instr("as/add.mem", 6); #10;
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
+        `ASSERT_EQ(lc_c.cpu_c.instr, 'h4041);
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);

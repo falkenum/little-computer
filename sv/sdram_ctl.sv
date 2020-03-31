@@ -1,6 +1,6 @@
 `include "defs.vh"
 
-module mem_ctl(
+module sdram_ctl(
 	output dram_clk,
 	output dram_cs_n,
 	output dram_ldqm,
@@ -19,8 +19,8 @@ module mem_ctl(
 
     // 2**25 addresses for 16 bit words
     input [24:0] addr,
-    input [`WORD_WIDTH-1:0] data_in,
-    output reg [`WORD_WIDTH-1:0] data_out
+    input [15:0] data_in,
+    output reg [15:0] data_out
 );
 
 	// wait for 100 us, 5000 * 20 ns period
@@ -54,10 +54,13 @@ module mem_ctl(
     assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
     assign dram_dq = state == STATE_WRITE ? dq_val : 16'bZ;
 
+
 	reg [31:0] wait_count = 0;
     reg [STATE_WIDTH-1:0] state = STATE_RST_NOP;
     reg [2:0] cmd = CMD_NOP;
-    reg [15:0] dq_val = 16'bZ;
+    reg [15:0] data_in_r, dq_val = 16'bZ;
+    reg [24:0] addr_r;
+    reg write_en_r;
 
 
     function [STATE_WIDTH-1:0] next_state_func;
@@ -77,21 +80,21 @@ module mem_ctl(
             STATE_RST_MODE_WRITE:
                 next_state_func = STATE_ACTIVATE;
             STATE_ACTIVATE:
-                if (write_en) next_state_func = STATE_WRITE;
-                else next_state_func = STATE_READ;
+                next_state_func = STATE_WRITE;
             STATE_WRITE: begin
                 next_state_func = STATE_POST_WRITE_NOP;
             end
             STATE_POST_WRITE_NOP:
-                // wait for data to propagate, not sure if this wait is needed
-                if (wait_count == 10) next_state_func = STATE_READ;
+                // wait for data to propagate, not sure how many cycles this actually needs to be
+                // 5 seems to work
+                if (wait_count == 5) next_state_func = STATE_READ;
                 else next_state_func = state;
             STATE_READ: begin
                 next_state_func = STATE_POST_READ_NOP;
             end
             STATE_POST_READ_NOP:
                 // CAS latency is 2
-                if (wait_count == 5) next_state_func = STATE_READ_COMPLETE;
+                if (wait_count == 2) next_state_func = STATE_READ_COMPLETE;
                 else next_state_func = state;
             STATE_READ_COMPLETE:
                 next_state_func = STATE_ACTIVATE;
@@ -106,7 +109,6 @@ module mem_ctl(
 		if (~rst) begin
 			wait_count = 0;
             state = STATE_RST_NOP;
-            cmd = CMD_NOP;
 		end
         wait_count += 1;
         state = next_state_func(state);
@@ -132,13 +134,17 @@ module mem_ctl(
                 wait_count = 0;
             end
             STATE_ACTIVATE: begin
+                write_en_r = write_en;
+                addr_r = addr;
+                data_in_r = data_in;
+
                 cmd = CMD_ACT;
-                {dram_ba, dram_addr} = addr[24:10];
+                {dram_ba, dram_addr} = addr_r[24:10];
             end
             STATE_WRITE: begin
-                cmd = CMD_WRITE;
-                dq_val = data_in;
-                {dram_ba, dram_addr[10:0]} = {addr[24:23], 1'b0, addr[9:0]};
+                cmd = write_en_r ? CMD_WRITE : CMD_NOP;
+                dq_val = data_in_r;
+                {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
                 wait_count = 0;
             end
             STATE_POST_WRITE_NOP: begin
@@ -146,7 +152,7 @@ module mem_ctl(
             end
             STATE_READ: begin
                 cmd = CMD_READ;
-                {dram_ba, dram_addr[10:0]} = {addr[24:23], 1'b1, addr[9:0]};
+                {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
                 wait_count = 0;
             end
             STATE_POST_READ_NOP: begin
