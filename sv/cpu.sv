@@ -60,7 +60,7 @@ module cpu(
         .result(alu_out)
     );
 
-    always @(posedge clk, negedge rst) begin
+    always @(posedge clk) begin
         if (~rst) begin 
             pc = 0;
             mem_write_en = 0;
@@ -69,13 +69,10 @@ module cpu(
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
-
             // need to make sure word is clocked into mem following the sw instruction
             // to give time for alu to output the right value
             if (mem_write_en) mem_write_en = 0;
-            if (is_sw) begin
-                mem_write_en = 1;
-            end
+            if (is_sw) mem_write_en = 1;
         end
     end
 endmodule

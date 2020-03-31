@@ -8,18 +8,18 @@ module registers(
     input write_en,
     input clk,
     input rst,
-    output [`WORD_WIDTH-1:0] rs_val,
-    output [`WORD_WIDTH-1:0] rt_val,
-    output [`WORD_WIDTH-1:0] rd_val
+    output reg [`WORD_WIDTH-1:0] rs_val,
+    output reg [`WORD_WIDTH-1:0] rt_val,
+    output reg [`WORD_WIDTH-1:0] rd_val
 );
     reg [`WORD_WIDTH-1:0] reg_file [`NUM_REGS];
     assign rs_val = reg_file[rs];
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
 
-    always @(posedge clk, negedge rst) begin
+    always @(posedge clk) begin
         if (~rst) reg_file[0] = 0;
-        else if (write_en) begin
+        if (write_en) begin
             // $display("writing value %x to register %x", reg_in, rd);
             reg_file[rd] = reg_in;
         end

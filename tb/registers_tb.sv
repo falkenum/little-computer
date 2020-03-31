@@ -16,21 +16,24 @@ module registers_tb;
         static integer i = 0; #10;
         RST = 1; #10;
         RST = 0; #10;
+        CLK = 1; #20;
+        CLK = 0; #20;
         RST = 1; #10;
        
-        reg_in = 1; #10;
         CLK = 1; #20;
         CLK = 0; #20;
 
-        rs = 0;
         `ASSERT_EQ(rs_val, 0);
+        `ASSERT_EQ(rt_val, 0);
 
-        reg_write_en = 1;
+        rd = 1; #10;
+        reg_in = 1; #10;
+        reg_write_en = 1; #10;
        
         CLK = 1; #20;
         CLK = 0; #20;
 
-        `ASSERT_EQ(rs_val, 1);
+        `ASSERT_EQ(rd_val, 1);
 
     end
 endmodule

@@ -7,29 +7,30 @@ module lc_tb;
 
     little_computer lc_c(.MAX10_CLK1_50(CLK), .KEY({1'b1, RST}), .SW(10'b0));
 
+
     task step_cycles(integer num_cycles);
-        repeat (num_cycles << `CPU_CLK_DIV_WIDTH) begin
-            #10 CLK = 1;
-            #10 CLK = 0;
+        repeat (num_cycles * (1 << `CPU_CLK_DIV_WIDTH)) begin
+            CLK = 1; #10;
+            CLK = 0; #10;
         end
         // $display("pc: %x", lc_c.pc);
     endtask
 
     task load_instr(string filename, integer length);
         $readmemh(filename, lc_c.cpu_mem_c.mem, 0, length - 1);
-        RST = 1; #10;
-        RST = 0; #10;
-        RST = 1; #10;
-        // $display("loaded %s", filename);
-        // $display("pc: %x", lc_c.pc);
+        RST = 1; #20;
+        RST = 0; #20;
+
+        // need to wait for cpu to reset
+        step_cycles(1);
+        RST = 1; #20;
     endtask
 
     initial begin
 
-        RST = 1; #10;
-        RST = 0; #10;
-        RST = 1; #10;
         load_instr("as/halt.mem", 1); #10;
+
+        // step_cycles(1000);
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
         step_cycles(1);
@@ -42,13 +43,24 @@ module lc_tb;
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         `ASSERT_EQ(lc_c.cpu_c.pc, 1);
+        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
+        // $display("pc: %x", lc_c.cpu_c.pc);
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         `ASSERT_EQ(lc_c.cpu_c.pc, 2);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
+        // $display("pc: %x", lc_c.cpu_c.pc);
+        // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
+        //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
+        // $display("rs: %x, val %x; rt: %x, val %x, use imm: %b", 
+        //     lc_c.cpu_c.rs, lc_c.cpu_c.rs_val, 
+        //     lc_c.cpu_c.rt, lc_c.cpu_c.rt_val, lc_c.cpu_c.alu_use_imm);
+        // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
+
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 2);
+        // $finish;
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], -16'd30);
         step_cycles(1);
@@ -57,10 +69,14 @@ module lc_tb;
 
         load_instr("as/arith.mem", 10); #10;
         while (lc_c.cpu_c.halted === 0) begin
+            // $display("pc: %x", lc_c.cpu_c.pc);
+            // $display("rt: %x, value: %x", lc_c.cpu_c.rt, lc_c.cpu_c.registers_c.reg_file[3]);
+            // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
+            //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
+            // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
             step_cycles(1);
         end
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], -16'sd9);
-        // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
 
         load_instr("as/labels.mem", 4); #10;
         while (lc_c.cpu_c.halted === 0) begin

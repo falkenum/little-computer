@@ -147,12 +147,9 @@ module little_computer(
 
     always @(posedge sysclk) begin
         if (~sysrst) begin
-            clk_800k_count = 0;
             uart_word_count = 0;
         end
-        else begin
-            clk_800k_count += 1;
-        end
+        clk_800k_count += 1;
 
         // inc counter on negedge of uart_word_ready
         if (uart_word_ready_vals[1] == 1 && uart_word_ready_vals[0] == 0) begin

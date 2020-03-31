@@ -15,7 +15,6 @@ module alu(
         `ALU_OP_NOT: result <= ~rs_val;
         default: result <= 0;
     endcase
-    // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", result, op, rs_val, rt_val);
     end
 
 endmodule
