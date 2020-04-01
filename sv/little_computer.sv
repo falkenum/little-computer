@@ -81,7 +81,7 @@ module little_computer(
     wire [7:0] uart_byte;
     wire [24:0] mem_map_dram_addr;
 
-    wire [24:0] dram_read_addr = load_en ? {9'b0, uart_word_count} : mem_map_dram_addr; 
+    wire [24:0] dram_read_addr = load_en ? {9'b0, uart_word_count} : pc; 
 
     sdram_ctl sdram_ctl_c(
         .dram_clk(DRAM_CLK),
@@ -131,8 +131,6 @@ module little_computer(
 
     mem_map mem_map_c(
         .dram_read_data(dram_data),
-
-        // TODO cpu_data_addr
         .pc(pc),
         .data_addr(cpu_data_addr),
         .write_en(cpu_mem_write_en),

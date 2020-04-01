@@ -22,20 +22,22 @@ module mem_map(
 
     reg [2:0] state = STATE_IDLE;
     reg [3:0] wait_count = 0;
-    reg [`WORD_WIDTH-1:0] last_pc = 16'hFFFF;
-    reg got_pc = 0;
+    reg [`WORD_WIDTH-1:0][2:0] pc_vals = {16'hFFFF, 16'hFFFF, 16'hFFFF};
+    reg got_instr = 0;
+
+    wire pc_changed = pc_vals[1] == pc_vals[0] && pc_vals[2] != pc_vals[1];
 
     function [2:0] next_state_func;
         input [2:0] state;
         case(state)
             STATE_IDLE:
-                if (last_pc != pc) next_state_func = STATE_FETCH_INSTR;
+                if (1'b1) next_state_func = STATE_FETCH_INSTR;
                 else next_state_func = state;
             STATE_FETCH_INSTR:
                 next_state_func = STATE_WAIT;
             STATE_WAIT:
-                if (wait_count == 9 && !got_pc) next_state_func = STATE_INSTR_OUT_FETCH_DATA;
-                else if (wait_count == 9 && got_pc) next_state_func = STATE_DATA_OUT;
+                if (wait_count == 11 && !got_instr) next_state_func = STATE_INSTR_OUT_FETCH_DATA;
+                else if (wait_count == 11 && got_instr) next_state_func = STATE_DATA_OUT;
                 else next_state_func = state;
             STATE_INSTR_OUT_FETCH_DATA:
                 next_state_func = STATE_WAIT;
@@ -50,11 +52,11 @@ module mem_map(
             state = STATE_IDLE;
         end
 
-        state = next_state_func(state);
+        else state = next_state_func(state);
 
         case(state)
             STATE_IDLE: begin
-                last_pc = pc;
+                // pc_vals = {pc_vals[1:0], pc};
             end 
             STATE_FETCH_INSTR: begin
                 dram_write_en = 1'b0;
@@ -64,12 +66,14 @@ module mem_map(
                     dram_addr = 25'b0; 
                 end
                 wait_count = 0;
+                got_instr = 0;
             end
             STATE_WAIT: begin
                 wait_count += 1;
             end
             STATE_INSTR_OUT_FETCH_DATA: begin
                 instr = dram_read_data;
+                got_instr = 1;
                 if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
                     dram_addr = {9'b0, data_addr}; 
                     dram_write_en = write_en;
