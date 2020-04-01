@@ -80,7 +80,8 @@ module sdram_ctl(
             STATE_RST_MODE_WRITE:
                 next_state_func = STATE_ACTIVATE;
             STATE_ACTIVATE:
-                next_state_func = STATE_WRITE;
+                if (write_en_r) next_state_func = STATE_WRITE;
+                else next_state_func = STATE_READ;
             STATE_WRITE: begin
                 next_state_func = STATE_POST_WRITE_NOP;
             end
@@ -142,7 +143,7 @@ module sdram_ctl(
                 {dram_ba, dram_addr} = addr_r[24:10];
             end
             STATE_WRITE: begin
-                cmd = write_en_r ? CMD_WRITE : CMD_NOP;
+                cmd = CMD_WRITE;
                 dq_val = data_in_r;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
                 wait_count = 0;

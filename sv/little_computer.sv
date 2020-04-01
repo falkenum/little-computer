@@ -63,6 +63,8 @@ module little_computer(
     reg [`WORD_WIDTH-1:0] uart_word_count = 0;
     reg [1:0] uart_word_ready_vals = 2'b11;
     reg [1:0] load_en_vals = 2'b11;
+    reg [1:0] key1_vals = 2'b11;
+    reg debug_clk = 0;
 
     wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
@@ -70,14 +72,15 @@ module little_computer(
     wire debug_mode = SW[0];
     wire load_en = SW[1];
     wire clk_800k = clk_800k_count[5];
-    wire cpu_clk = debug_mode ? ~KEY[1] : clk_800k;
+    wire cpu_clk = debug_mode ? debug_clk : clk_800k;
     wire cpu_rst = sysrst & ~load_en;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en;
-    wire [`WORD_WIDTH-1:0] uart_word, dram_data, 
+    wire [`WORD_WIDTH-1:0] uart_word, 
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_byte;
     wire [24:0] mem_map_dram_addr;
+    wire [15:0] read_addr = load_en ? uart_word_count : pc; 
 
     sdram_ctl sdram_ctl_c(
         .dram_clk(DRAM_CLK),
@@ -94,10 +97,10 @@ module little_computer(
 
         .rst(sysrst),
         .clk(sysclk),
-        .write_en(load_en ? 1'b1 : mem_map_dram_write_en),
-        .addr(load_en ? uart_word_count : mem_map_dram_addr),
-        .data_in(load_en ? uart_word : cpu_data),
-        .data_out(dram_data)
+        .write_en(load_en),
+        .addr(read_addr),
+        .data_in(uart_word),
+        .data_out(instr)
     );
 
     uart_sr uart_sr_c(
@@ -119,23 +122,23 @@ module little_computer(
 
     display display_c(
         .debug_en(debug_mode), 
-        .value({instr, pc[7:0]}),
+        .value({instr, read_addr[7:0]}),
         // .value({dram_data_out, pc[7:0]}),
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
 
-    mem_map mem_map_c(
-        .dram_read_data(dram_data),
+    // mem_map mem_map_c(
+    //     .dram_read_data(dram_data),
 
-        // TODO cpu_data_addr
-        .addr_in(pc),
-        .write_en(cpu_mem_write_en),
+    //     // TODO cpu_data_addr
+    //     .addr_in(pc),
+    //     .write_en(cpu_mem_write_en),
 
-        .dram_addr(mem_map_dram_addr),
-        .dram_write_en(mem_map_dram_write_en),
-        // TODO cpu_lw_out
-        .read_data(instr)
-    );
+    //     .dram_addr(mem_map_dram_addr),
+    //     .dram_write_en(mem_map_dram_write_en),
+    //     // TODO cpu_lw_out
+    //     .read_data(instr)
+    // );
 
     cpu cpu_c(
         .clk(cpu_clk),
@@ -144,9 +147,9 @@ module little_computer(
         .data_in(mem_map_lw_data),
 
         .pc(pc),
-        .data_addr(cpu_data_addr),
-        .data_out(cpu_data),
-        .mem_write_en(cpu_mem_write_en)
+        .data_addr(),
+        .data_out(),
+        .mem_write_en()
     );
 
     always @(posedge sysclk) begin
@@ -165,7 +168,15 @@ module little_computer(
         if (load_en_vals[1] == 0 && load_en_vals[0] == 1) begin
             uart_word_count = 0;
         end
+
         load_en_vals = {load_en_vals[0], load_en};
+
+        if (key1_vals[1] == 1 && key1_vals[0] == 0) begin
+            debug_clk = 1;
+        end else if(key1_vals[1] == 0 && key1_vals[0] == 1) begin
+            debug_clk = 0;
+        end
+        key1_vals = {key1_vals[0], KEY[1]};
     end
 
 endmodule
