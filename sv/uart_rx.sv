@@ -10,6 +10,7 @@
 module uart_rx #(parameter clks_per_bit = 325) (
     input rx,
     input clk,
+    input rst,
     output reg [7:0] data,
     output reg data_ready
 );
@@ -46,6 +47,7 @@ module uart_rx #(parameter clks_per_bit = 325) (
     endcase
 
     always @(posedge clk_baud) begin
+        if (~rst) state = `STATE_IDLE;
         state = next_state;
         if (receiving) sync_count += 1;
         case (state)

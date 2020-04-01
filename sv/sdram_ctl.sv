@@ -110,6 +110,7 @@ module sdram_ctl(
 		if (~rst) begin
 			wait_count = 0;
             state = STATE_RST_NOP;
+            dq_val = 16'bZ;
 		end
         wait_count += 1;
         state = next_state_func(state);

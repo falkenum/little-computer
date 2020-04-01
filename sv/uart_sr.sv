@@ -18,7 +18,7 @@ module uart_sr(
             clocked_first_byte = 0;
             uart_word_ready = 0;
             uart_word_loaded = 0;
-            byte_ready_vals = 4'hf;
+            byte_ready_vals = 0;
         end else begin
             if (byte_ready_vals[3] == 0 & byte_ready_vals [2:0] == 3'b111) begin
                 if (~clocked_first_byte) begin
