@@ -58,14 +58,6 @@ module lc_tb;
 
         load_instr("as/halt.mem", 1); #10;
         $display("pc: %x", lc_c.cpu_c.pc);
-        // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
-        //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
-        // $display("rs: %x, val %x; rt: %x, val %x, use imm: %b", 
-        //     lc_c.cpu_c.rs, lc_c.cpu_c.rs_val, 
-        //     lc_c.cpu_c.rt, lc_c.cpu_c.rt_val, lc_c.cpu_c.alu_use_imm);
-        // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
-
-        // step_cycles(1000);
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
         step_cycles(1);

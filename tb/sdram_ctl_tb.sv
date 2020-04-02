@@ -47,7 +47,7 @@ module sdram_ctl_tb;
     );
 
     initial begin
-        repeat(200000) begin
+        repeat(10000) begin
             clk = 1; #10;
             clk = 0; #10;
         end
@@ -119,6 +119,11 @@ module sdram_ctl_tb;
         write_en = 0;
         #(11*20);
         `ASSERT_EQ(data_out, 'hff);
+        addr = 1;
+        data_in = 'hfe;
+        write_en = 0;
+        #(11*20);
+        `ASSERT_EQ(data_out, 'hfe);
 
         // $display("%03b", sdram_ctl_c.cmd);
         // $display("%b%b%b", ras_n, cas_n, we_n);
