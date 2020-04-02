@@ -75,8 +75,9 @@ module little_computer(
     wire cpu_clk = debug_mode ? debug_clk : clk_800k;
     wire cpu_rst = sysrst & ~load_en;
 
-    wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en;
-    wire [`WORD_WIDTH-1:0] uart_word, dram_data,
+    wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
+        mem_map_to_dram_refresh;
+    wire [`WORD_WIDTH-1:0] uart_word, dram_data, mem_map_to_dram_data,
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_byte;
     wire [24:0] mem_map_dram_addr;
@@ -100,7 +101,8 @@ module little_computer(
         .clk(sysclk),
         .write_en(load_en ? 1'b1 : mem_map_dram_write_en),
         .addr(dram_read_addr),
-        .data_in(load_en ? uart_word : cpu_data),
+        .refresh_data(mem_map_to_dram_refresh),
+        .data_in(load_en ? uart_word : mem_map_to_dram_data),
         .data_out(dram_data)
     );
 
@@ -134,11 +136,14 @@ module little_computer(
         .pc(pc),
         .data_addr(cpu_data_addr),
         .write_en(cpu_mem_write_en),
+        .data_in(cpu_data),
         .clk(sysclk),
         .rst(sysrst),
 
+        .dram_refresh_data(mem_map_to_dram_refresh),
         .dram_addr(mem_map_dram_addr),
         .dram_write_en(mem_map_dram_write_en),
+        .dram_data_in(mem_map_to_dram_data),
         .read_data(mem_map_lw_data),
         .instr(instr)
     );
