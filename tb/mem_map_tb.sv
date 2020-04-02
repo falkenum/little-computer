@@ -18,7 +18,7 @@ module mem_map_tb;
     wire [15:0] data_out;
 
     // sdram ctl wires
-    reg [15:0] dram_ctl_data_in;
+    wire [15:0] dram_ctl_data_in;
     wire dram_ctl_write_en;
     wire [24:0] dram_ctl_addr;
     wire [15:0] dram_ctl_data_out;
@@ -73,8 +73,10 @@ module mem_map_tb;
         .dram_addr(dram_ctl_addr),
         .dram_write_en(dram_ctl_write_en),
         .dram_refresh_data(dram_refresh_data),
+        .dram_data_in(dram_ctl_data_in),
 
         //inputs
+        .data_in(data_in),
         .pc(pc),
         .data_addr(data_addr),
         .write_en(write_en),
@@ -172,23 +174,74 @@ module mem_map_tb;
         #SYS_CYCLE;
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_FETCH_INSTR);
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
 
-
-        // #CPU_CYCLE;
-        // `ASSERT_EQ(instr, 'hE000);
-        // `ASSERT_EQ(data_out, 'habab);
-        // $display("%x", data_out);
-
-        $finish;
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ_NOP);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ_COMPLETE);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_INSTR_OUT_FETCH_DATA);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
+        `ASSERT_EQ(mem_map_c.dram_data_in, 'habab);
+        `ASSERT_EQ(mem_map_c.data_in, 'habab);
+        `ASSERT_EQ(sdram_ctl_c.data_in, 'habab);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_WRITE);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_WRITE_NOP);
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ_NOP);
+        #SYS_CYCLE;
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ_COMPLETE);
+        #SYS_CYCLE;
+        `ASSERT_EQ(instr, 'hE000);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_DATA_OUT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
+        `ASSERT_EQ(sdram_c.mem[0], 'habab);
+        `ASSERT_EQ(mem_map_c.dram_read_data, 'habab);
+        `ASSERT_EQ(data_out, 'habab);
 
         #CPU_CYCLE;
         `ASSERT_EQ(instr, 'hE000);
-        // $display("%x", instr);
         `ASSERT_EQ(data_out, 'hABAB);
-        $display("%x", mem_map_c.read_data);
-        // `ASSERT_EQ(sdram_ctl_c.addr_r, 2);
-        // $display(sdram_ctl_c.addr_r);
-
+        pc = 0;
+        write_en = 0;
+        data_in = 'hABAB;
+        data_addr = 5;
+        #CPU_CYCLE;
+        `ASSERT_EQ(data_out, 'hE000);
+        `ASSERT_EQ(instr, 'hABAB);
+        pc = 3;
+        write_en = 1;
+        data_addr = 7;
+        data_in = 'hcdcd;
+        #CPU_CYCLE;
+        `ASSERT_EQ(data_out, 'hcdcd);
+        `ASSERT_EQ(instr, 'h4809);
 
     end
 endmodule
