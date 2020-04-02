@@ -57,7 +57,7 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
 
-    assign GPIO[7:0] = {instr[15:12], uart_word_count[1:0], uart_word_ready, load_en};
+    assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_word_ready, uart_rx};
 
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count = 0;
     reg [`WORD_WIDTH-1:0] uart_word_count = 0;

@@ -22,17 +22,16 @@ module mem_map(
 
     reg [2:0] state = STATE_IDLE;
     reg [3:0] wait_count = 0;
-    reg [`WORD_WIDTH-1:0][2:0] pc_vals = {16'hFFFF, 16'hFFFF, 16'hFFFF};
+    // reg [`WORD_WIDTH-1:0][2:0] pc_vals = {16'hFFFF, 16'hFFFF, 16'hFFFF};
     reg got_instr = 0;
 
-    wire pc_changed = pc_vals[1] == pc_vals[0] && pc_vals[2] != pc_vals[1];
+    // wire pc_changed = pc_vals[1] == pc_vals[0] && pc_vals[2] != pc_vals[1];
 
     function [2:0] next_state_func;
         input [2:0] state;
         case(state)
             STATE_IDLE:
-                if (1'b1) next_state_func = STATE_FETCH_INSTR;
-                else next_state_func = state;
+                next_state_func = STATE_FETCH_INSTR;
             STATE_FETCH_INSTR:
                 next_state_func = STATE_WAIT;
             STATE_WAIT:
@@ -50,6 +49,9 @@ module mem_map(
     always @(posedge clk) begin
         if (~rst) begin
             state = STATE_IDLE;
+            // pc_vals = {16'hFFFF, 16'hFFFF, 16'hFFFF};
+            wait_count = 0;
+            got_instr = 0;
         end
 
         else state = next_state_func(state);

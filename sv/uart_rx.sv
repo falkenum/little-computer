@@ -47,7 +47,16 @@ module uart_rx #(parameter clks_per_bit = 325) (
     endcase
 
     always @(posedge clk_baud) begin
-        if (~rst) state = `STATE_IDLE;
+        if (~rst) begin
+            sync_count = 0;
+            receiving = 0;
+            clock_synced = 0;
+            stop_clocked = 0;
+            data_ready = 0;
+            data_write = 1;
+
+            state = `STATE_IDLE;
+        end
         else state = next_state;
         if (receiving) sync_count += 1;
         case (state)

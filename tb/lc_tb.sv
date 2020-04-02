@@ -4,8 +4,36 @@
 module lc_tb;
 
     logic CLK = 0, RST = 0;
+	wire		    [12:0]		addr;
+	wire		     [1:0]		ba;
+	wire		          		ras_n;
+	wire		          		cas_n;
+	wire		          		we_n;
+	wire		          		dram_clk;
+	wire 		    [15:0]		dq;
 
-    little_computer lc_c(.MAX10_CLK1_50(CLK), .KEY({1'b1, RST}), .SW(10'b0));
+    
+    sdram_sim sdram_c(
+        .addr(addr),
+        .ba(ba),
+        .ras_n(ras_n),
+        .cas_n(cas_n),
+        .we_n(we_n),
+        .clk(dram_clk),
+        .dq(dq)
+    );
+    little_computer lc_c(
+        .MAX10_CLK1_50(CLK), 
+        .KEY({1'b1, RST}), 
+        .SW(10'b0),
+        .DRAM_ADDR(addr),
+        .DRAM_BA(ba),
+        .DRAM_RAS_N(ras_n),
+        .DRAM_CAS_N(cas_n),
+        .DRAM_WE_N(we_n),
+        .DRAM_CLK(dram_clk),
+        .DRAM_DQ(dq)
+    );
 
 
     task step_cycles(integer num_cycles);
@@ -17,7 +45,7 @@ module lc_tb;
     endtask
 
     task load_instr(string filename, integer length);
-        $readmemh(filename, lc_c.cpu_mem_c.mem, 0, length - 1);
+        $readmemh(filename, lc_c.sdram_c.mem, 0, length - 1);
         RST = 1; #20;
         RST = 0; #20;
 
@@ -29,6 +57,13 @@ module lc_tb;
     initial begin
 
         load_instr("as/halt.mem", 1); #10;
+        $display("pc: %x", lc_c.cpu_c.pc);
+        // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
+        //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
+        // $display("rs: %x, val %x; rt: %x, val %x, use imm: %b", 
+        //     lc_c.cpu_c.rs, lc_c.cpu_c.rs_val, 
+        //     lc_c.cpu_c.rt, lc_c.cpu_c.rt_val, lc_c.cpu_c.alu_use_imm);
+        // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
 
         // step_cycles(1000);
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
@@ -51,13 +86,6 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         `ASSERT_EQ(lc_c.cpu_c.pc, 2);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
-        // $display("pc: %x", lc_c.cpu_c.pc);
-        // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
-        //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
-        // $display("rs: %x, val %x; rt: %x, val %x, use imm: %b", 
-        //     lc_c.cpu_c.rs, lc_c.cpu_c.rs_val, 
-        //     lc_c.cpu_c.rt, lc_c.cpu_c.rt_val, lc_c.cpu_c.alu_use_imm);
-        // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
 
         step_cycles(1);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 2);
@@ -115,7 +143,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h6001);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h6002);
-        `ASSERT_EQ(lc_c.cpu_mem_c.mem[31], 'h6002);
+        `ASSERT_EQ(lc_c.sdram_c.mem[31], 'h6002);
     end
 endmodule
 

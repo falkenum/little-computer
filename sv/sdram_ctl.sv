@@ -52,7 +52,7 @@ module sdram_ctl(
     assign {dram_udqm, dram_ldqm} = 2'b0;
     assign dram_cs_n = 0;
     assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
-    assign dram_dq = state == STATE_WRITE ? dq_val : 16'bZ;
+    assign dram_dq = drive_val ? dq_val : 16'bZ;
 
 
 	reg [31:0] wait_count = 0;
@@ -60,7 +60,7 @@ module sdram_ctl(
     reg [2:0] cmd = CMD_NOP;
     reg [15:0] data_in_r, dq_val = 16'bZ;
     reg [24:0] addr_r;
-    reg write_en_r;
+    reg write_en_r, drive_val = 0;
 
 
     function [STATE_WIDTH-1:0] next_state_func;
@@ -109,11 +109,12 @@ module sdram_ctl(
     always @(posedge clk) begin
 		if (~rst) begin
 			wait_count = 0;
+            drive_val = 0;
             state = STATE_RST_NOP;
             dq_val = 16'bZ;
 		end
-        wait_count += 1;
         state = next_state_func(state);
+        wait_count += 1;
         case(state)
             STATE_RST_NOP: begin
                 cmd = CMD_NOP;
@@ -148,6 +149,7 @@ module sdram_ctl(
                 dq_val = data_in_r;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
                 wait_count = 0;
+                drive_val = 1;
             end
             STATE_POST_WRITE_NOP: begin
                 cmd = CMD_NOP;
@@ -156,6 +158,7 @@ module sdram_ctl(
                 cmd = CMD_READ;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
                 wait_count = 0;
+                drive_val = 0;
             end
             STATE_POST_READ_NOP: begin
                 cmd = CMD_NOP;
