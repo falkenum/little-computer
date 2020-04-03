@@ -60,7 +60,8 @@ module little_computer(
     localparam STATE_CPU_RESET = 1;
     localparam STATE_RUNNING = 2;
 
-    assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_word_ready, uart_rx};
+    assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_tx, uart_rx};
+    assign GPIO[9] = uart_tx;
 
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
@@ -79,7 +80,7 @@ module little_computer(
     wire cpu_ready = state == STATE_RUNNING;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
-        mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready;
+        mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx;
     wire [`WORD_WIDTH-1:0] uart_word, dram_data, mem_map_to_dram_data,
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_byte;
@@ -118,6 +119,16 @@ module little_computer(
         .clk(sysclk),
         .uart_word_ready(uart_word_ready),
         .uart_word(uart_word)
+    );
+
+    uart_tx uart_tx_c(
+        // white wire
+        .tx(uart_tx),
+        .clk(sysclk),
+        .rst(sysrst),
+        .data(8'hab),
+        .start_n(KEY[1]),
+        .ready_to_send(uart_tx_ready)
     );
 
     uart_rx uart_rx_c(

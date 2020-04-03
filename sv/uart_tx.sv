@@ -17,23 +17,11 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
     reg clk_baud;
     reg [1:0] state;
     reg [1:0] start_n_vals;
+    reg [1:0] clk_baud_vals;
     localparam STATE_IDLE = 0;
     localparam STATE_START = 1;
     localparam STATE_DATA = 2;
     localparam STATE_STOP = 3;
-
-
-    always @(posedge clk) begin
-        if (~rst) begin
-            clk_count = 0;
-        end
-        clk_count += 1;
-
-        if (clk_count >= clks_per_bit >> 1) begin
-            clk_baud = ~clk_baud;
-            clk_count = 0;
-        end
-    end
 
     function [1:0] next_state_func;
         input [1:0] state;
@@ -51,36 +39,47 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
         endcase
     endfunction
 
-    always @(posedge clk_baud) begin
+    always @(posedge clk) begin
+        clk_count += 1;
+        if (clk_count >= clks_per_bit >> 1) begin
+            clk_baud = ~clk_baud;
+            clk_count = 0;
+        end
+        clk_baud_vals = {clk_baud_vals[0], clk_baud};
         if (~rst) begin
             clk_baud = 0;
-            data_write = 1;
             data_sr = 0;
             tx = 1;
             ready_to_send = 0;
             state = STATE_IDLE;
             start_n_vals = 2'b00;
+            clk_count = 0;
         end
-        else state = next_state_func(state);
-        case (state)
-            STATE_IDLE: begin
-                tx = 1;
-                ready_to_send = 1;
-            end
-            STATE_START: begin
-                data_sr = data;
-                ready_to_send = 0;
-                tx = 0;
-            end
-            STATE_DATA: begin
-                tx = data_sr[0];
-                data_sr = data_sr >> 1;
-                data_write = data_write << 1;
-            end
-            STATE_STOP: begin
-                tx = 1;
-            end
-        endcase
-        start_n_vals = {start_n_vals[0], start_n};
+        // if (clk_baud_vals != 0 && clk_baud_vals != 'b11) $display("baud vals: %b", clk_baud_vals);
+        if (clk_baud_vals[1] == 0 && clk_baud_vals[0] == 1) begin
+            state = next_state_func(state);
+            case (state)
+                STATE_IDLE: begin
+                    tx = 1;
+                    ready_to_send = 1;
+                end
+                STATE_START: begin
+                    data_sr = data;
+                    ready_to_send = 0;
+                    tx = 0;
+                    data_write = 1;
+                end
+                STATE_DATA: begin
+                    tx = data_sr[0];
+                    data_sr = data_sr >> 1;
+                    data_write = data_write << 1;
+                end
+                STATE_STOP: begin
+                    tx = 1;
+                end
+            endcase
+            start_n_vals = {start_n_vals[0], start_n};
+        end
+
     end
 endmodule

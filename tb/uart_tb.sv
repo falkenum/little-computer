@@ -38,8 +38,10 @@ module uart_tb();
     );
 
     localparam SYS_CYCLE = 20;
+    localparam BAUD_CYCLE = SYS_CYCLE*325*16;
+
     initial begin
-        repeat(100000) begin
+        forever begin
             clk = 1; #SYS_CYCLE;
             clk = 0; #SYS_CYCLE;
         end
@@ -49,17 +51,45 @@ module uart_tb();
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
         data_to_send = 'hAB;
-        start_n = 1; #(SYS_CYCLE*325*16)
-        start_n = 0; 
-        while (uart_tx_c.state == uart_tx_c.STATE_IDLE) #SYS_CYCLE;
-        `ASSERT_EQ(uart_tx_c.data_sr, 'hab);
-        `ASSERT_EQ(uart_tx_c.state, uart_tx_c.STATE_START);
-        $display(uart_tx_c.state);
-        $display("%x", uart_tx_c.data);
+        start_n = 1; #BAUD_CYCLE;
+        start_n = 0;
+        // $display("start low at ", $time);
+        // $display("count: %d", uart_tx_c.clk_count);
+        while (uart_rx_c.state == uart_rx_c.STATE_IDLE) begin
+            // $display("idle");
+            #BAUD_CYCLE;
+        end
         start_n = 1;
+        while (uart_rx_c.state == uart_rx_c.STATE_START) begin
+            #BAUD_CYCLE;
+        end
+        while (uart_rx_c.state == uart_rx_c.STATE_DATA) begin
+            #BAUD_CYCLE;
+        end
+        while (uart_rx_c.state != uart_rx_c.STATE_IDLE) begin
+            #BAUD_CYCLE;
+        end
 
-        while (!byte_ready) #SYS_CYCLE;
         `ASSERT_EQ(uart_byte, 'hAB);
-        $display("%x", uart_byte);
+        `ASSERT_EQ(byte_ready, 1);
+        data_to_send = 'hCD;
+        start_n = 1; #BAUD_CYCLE;
+        start_n = 0;
+        while (uart_rx_c.state == uart_rx_c.STATE_IDLE) begin
+            #BAUD_CYCLE;
+        end
+        start_n = 1;
+        while (uart_rx_c.state == uart_rx_c.STATE_START) begin
+            #BAUD_CYCLE;
+        end
+        while (uart_rx_c.state == uart_rx_c.STATE_DATA) begin
+            #BAUD_CYCLE;
+        end
+        while (uart_rx_c.state != uart_rx_c.STATE_IDLE) begin
+            #BAUD_CYCLE;
+        end
+        `ASSERT_EQ(word_ready, 1);
+        `ASSERT_EQ(uart_word, 'hCDAB);
+        $finish;
     end
 endmodule
