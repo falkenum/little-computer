@@ -218,6 +218,16 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h6001);
         `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h6002);
         `ASSERT_EQ(lc_c.sdram_c.mem[31], 'h6002);
+
+        load_instr("as/data2.mem", 7);
+        while (lc_c.cpu_c.halted === 0) begin
+            #CPU_CYCLE;
+        end
+        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h1);
+        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h4044);
+        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[3], 'h4042);
+        `ASSERT_EQ(lc_c.sdram_c.mem[17], 'h4042);
     end
 endmodule
 
