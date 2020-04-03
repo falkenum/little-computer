@@ -1,10 +1,6 @@
 
 `include "defs.vh"
 
-`define STATE_IDLE 0
-`define STATE_START 1
-`define STATE_DATA 2
-`define STATE_STOP 3
 
 // 9600 baud
 module uart_tx #(parameter clks_per_bit = 325*16) (
@@ -17,10 +13,14 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
 );
     reg [7:0] data_write;
     reg [7:0] data_sr;
-    reg [7:0] clk_count;
+    integer clk_count;
     reg clk_baud;
     reg [1:0] state;
     reg [1:0] start_n_vals;
+    localparam STATE_IDLE = 0;
+    localparam STATE_START = 1;
+    localparam STATE_DATA = 2;
+    localparam STATE_STOP = 3;
 
 
     always @(posedge clk) begin
@@ -38,16 +38,16 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
     function [1:0] next_state_func;
         input [1:0] state;
         case (state)
-            `STATE_IDLE: 
-                if (start_n_vals[1] == 1 && start_n_vals[0] == 0) next_state_func = `STATE_START;
+            STATE_IDLE: 
+                if (start_n_vals[1] == 1 && start_n_vals[0] == 0) next_state_func = STATE_START;
                 else next_state_func = state;
-            `STATE_START:
-                next_state_func = `STATE_DATA;
-            `STATE_DATA:
-                if (!data_write) next_state_func = `STATE_STOP;
+            STATE_START:
+                next_state_func = STATE_DATA;
+            STATE_DATA:
+                if (!data_write) next_state_func = STATE_STOP;
                 else next_state_func = state;
-            `STATE_STOP:
-                next_state_func = `STATE_IDLE;
+            STATE_STOP:
+                next_state_func = STATE_IDLE;
         endcase
     endfunction
 
@@ -58,26 +58,26 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
             data_sr = 0;
             tx = 1;
             ready_to_send = 0;
-            state = `STATE_IDLE;
+            state = STATE_IDLE;
             start_n_vals = 2'b00;
         end
         else state = next_state_func(state);
         case (state)
-            `STATE_IDLE: begin
+            STATE_IDLE: begin
                 tx = 1;
                 ready_to_send = 1;
             end
-            `STATE_START: begin
+            STATE_START: begin
                 data_sr = data;
                 ready_to_send = 0;
                 tx = 0;
             end
-            `STATE_DATA: begin
+            STATE_DATA: begin
                 tx = data_sr[0];
                 data_sr = data_sr >> 1;
                 data_write = data_write << 1;
             end
-            `STATE_STOP: begin
+            STATE_STOP: begin
                 tx = 1;
             end
         endcase

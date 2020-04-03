@@ -6,7 +6,7 @@ module mem_map(
     input [`WORD_WIDTH-1:0] data_in,
     input [`WORD_WIDTH-1:0] dram_read_data,
     input dram_data_ready,
-    input dram_ready,
+    input cpu_ready,
     input write_en,
     input clk,
     input rst,
@@ -38,7 +38,7 @@ module mem_map(
         input [2:0] state;
         case(state)
             STATE_IDLE:
-                if (dram_ready && pc != last_pc) next_state_func = STATE_FETCH_INSTR;
+                if (cpu_ready && pc != last_pc) next_state_func = STATE_FETCH_INSTR;
                 else next_state_func = state;
             STATE_FETCH_INSTR:
                 next_state_func = STATE_WAIT;
@@ -71,7 +71,7 @@ module mem_map(
 
         case(state)
             STATE_IDLE: begin
-                last_pc = ~dram_ready ? 'hffff : pc;
+                last_pc = ~cpu_ready ? 'hffff : pc;
             end 
             STATE_FETCH_INSTR: begin
                 dram_write_en = 1'b0;

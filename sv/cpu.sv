@@ -5,6 +5,8 @@ module cpu(
     input rst,
     input [`WORD_WIDTH-1:0] instr,
     input [`WORD_WIDTH-1:0] data_in,
+    input debug_clk,
+    input debug_mode,
     output [`WORD_WIDTH-1:0] data_addr,
     output [`WORD_WIDTH-1:0] data_out,
     output reg [`WORD_WIDTH-1:0] pc,
@@ -15,6 +17,11 @@ module cpu(
     assign data_out = rd_val;
     assign mem_write_en = is_sw;
 
+    reg [`WORD_WIDTH-1:0] reg_file [`NUM_REGS];
+    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count;
+    reg [1:0] cpu_clk_vals;
+
+    wire cpu_clk = debug_mode ? debug_clk : clk_800k_count[5];
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J;
@@ -39,20 +46,8 @@ module cpu(
     wire [`WORD_WIDTH-1:0] jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
     wire [`WORD_WIDTH-1:0] reg_in = is_lw ? data_in : alu_out;
 
-    wire [`WORD_WIDTH-1:0] rs_val, rt_val, rd_val, alu_out;
-
-    registers registers_c(
-        .rs(rs), 
-        .rt(rt), 
-        .rd(rd), 
-        .reg_in(reg_in), 
-        .write_en(reg_write_en), 
-        .clk(clk), 
-        .rst(rst), 
-        .rs_val(rs_val), 
-        .rt_val(rt_val), 
-        .rd_val(rd_val)
-    );
+    wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
+    wire [`WORD_WIDTH-1:0] alu_out;
 
     alu alu_c(
         .op(alu_op), 
@@ -61,18 +56,26 @@ module cpu(
         .result(alu_out)
     );
 
-    always @(posedge clk, negedge rst) begin
+    always @(posedge clk) begin
+        clk_800k_count += 1;
+        cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
             pc = 0;
+            clk_800k_count = 0;
+            cpu_clk_vals = 2'b00;
+            reg_file[0] = 0;
         end
-        else begin
+
+        // posedge of cpu clk
+        else if (cpu_clk_vals[1] == 0 && cpu_clk_vals[0] == 1) begin
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));
-            // need to make sure word is clocked into mem following the sw instruction
-            // to give time for alu to output the right value
-            // if (mem_write_en) mem_write_en = 0;
-            // if (is_sw) mem_write_en = 1;
+            if (reg_write_en) begin
+                // $display("rs_val: %x, rt_val: %x, rs: %x, rt: %x", rs_val, rt_val, rs, rt);
+                // $display("writing value %x to register %x", reg_in, rd);
+                reg_file[rd] = reg_in;
+            end
         end
     end
 endmodule

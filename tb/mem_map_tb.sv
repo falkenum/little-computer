@@ -76,7 +76,7 @@ module mem_map_tb;
         .dram_write_en(dram_ctl_write_en),
         .dram_refresh_data(dram_refresh_data),
         .dram_data_in(dram_ctl_data_in),
-        .dram_ready(dram_ctl_ready),
+        .cpu_ready(1'b1),
 
         //inputs
         .data_in(data_in),

@@ -57,27 +57,26 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
     localparam STATE_RESET = 0;
-    localparam STATE_RUNNING = 1;
+    localparam STATE_CPU_RESET = 1;
+    localparam STATE_RUNNING = 2;
 
     assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_word_ready, uart_rx};
 
-    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count;
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
     reg [1:0] load_en_vals;
     reg [1:0] key1_vals;
-    reg debug_clk;
-    reg state;
+    reg [1:0] state;
     reg internal_cpu_rst;
 
     wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
     wire sysrst = KEY[0];
     wire debug_mode = SW[0];
+    wire debug_clk = KEY[1];
     wire load_en = SW[1];
-    wire clk_800k = clk_800k_count[5];
-    wire cpu_clk = debug_mode ? debug_clk : clk_800k;
     wire cpu_rst = sysrst & internal_cpu_rst;
+    wire cpu_ready = state == STATE_RUNNING;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
         mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready;
@@ -147,7 +146,7 @@ module little_computer(
         .rst(sysrst),
 
         .dram_data_ready(dram_to_mem_map_data_ready),
-        .dram_ready(dram_ready),
+        .cpu_ready(cpu_ready),
         .dram_refresh_data(mem_map_to_dram_refresh),
         .dram_addr(mem_map_dram_addr),
         .dram_write_en(mem_map_dram_write_en),
@@ -157,10 +156,12 @@ module little_computer(
     );
 
     cpu cpu_c(
-        .clk(cpu_clk),
-        .rst(sysrst),
+        .clk(sysclk),
+        .rst(cpu_rst),
         .instr(instr),
         .data_in(mem_map_lw_data),
+        .debug_clk(debug_clk),
+        .debug_mode(debug_mode),
 
         .pc(pc),
         .data_addr(cpu_data_addr),
@@ -168,8 +169,8 @@ module little_computer(
         .mem_write_en(cpu_mem_write_en)
     );
 
-    function next_state_func;
-        input state;
+    function [1:0] next_state_func;
+        input [1:0] state;
         case(state)
             STATE_RESET:
                 if (dram_ready) next_state_func = STATE_RUNNING;
@@ -185,22 +186,18 @@ module little_computer(
             uart_word_count = 0;
             uart_word_ready_vals = 2'b00;
             state = STATE_RESET;
-            clk_800k_count = 0;
             load_en_vals = 2'b11;
             key1_vals = 2'b11;
-            debug_clk = 0;
-            internal_cpu_rst = 1;
+            internal_cpu_rst = 0;
         end
         else state = next_state_func(state);
 
         case(state)
             STATE_RESET: begin
                 internal_cpu_rst = 0;
-                clk_800k_count = 0;
             end
             STATE_RUNNING: begin
                 internal_cpu_rst = 1;
-                clk_800k_count += 6'b1;
             end
         endcase
 
@@ -217,12 +214,6 @@ module little_computer(
 
         load_en_vals = {load_en_vals[0], load_en};
 
-        if (key1_vals[1] == 1 && key1_vals[0] == 0) begin
-            debug_clk = 1;
-        end else if(key1_vals[1] == 0 && key1_vals[0] == 1) begin
-            debug_clk = 0;
-        end
-        key1_vals = {key1_vals[0], KEY[1]};
     end
 
 endmodule

@@ -39,7 +39,9 @@ module lc_tb;
     );
 
     initial begin
-        repeat(1000) step_cycles(1);
+        forever begin
+            step_cycles(1);
+        end
     end
 
     task step_cycles(integer num_cycles);
@@ -53,6 +55,7 @@ module lc_tb;
     task load_instr(string filename, integer length);
         $readmemh(filename, lc_c.sdram_c.mem, 0, length - 1);
         RST = 0; #SYS_CYCLE;
+
         RST = 1;
         while (lc_c.state != lc_c.STATE_RUNNING) begin
             #SYS_CYCLE;
@@ -69,11 +72,14 @@ module lc_tb;
         `ASSERT_EQ(lc_c.dram_ready, 1);
 
         `ASSERT_EQ(lc_c.pc, 0);
+        #SYS_CYCLE;
         `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_INSTR);
+        while (lc_c.mem_map_c.state != lc_c.mem_map_c.STATE_IDLE) begin
+            #SYS_CYCLE;
+        end
         #CPU_CYCLE;
         `ASSERT_EQ(lc_c.pc, 0);
         `ASSERT_EQ(lc_c.cpu_c.instr, 'he000);
-        // `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_INSTR);
 
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
@@ -83,18 +89,18 @@ module lc_tb;
 
         load_instr("as/add.mem", 6);
         `ASSERT_EQ(lc_c.pc, 0);
-        `ASSERT_EQ(lc_c.clk_800k_count, 1);
-        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_INSTR);
+        `ASSERT_EQ(lc_c.cpu_c.clk_800k_count, 0);
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_IDLE);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
         #(SYS_CYCLE*13);
-        `ASSERT_EQ(lc_c.clk_800k_count, 14);
+        `ASSERT_EQ(lc_c.cpu_c.clk_800k_count, 13);
         `ASSERT_EQ(lc_c.instr, 'h4041);
         #CPU_CYCLE;
         `ASSERT_EQ(lc_c.pc, 1);
         `ASSERT_EQ(lc_c.instr, 'h0009);
         #CPU_CYCLE;
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         `ASSERT_EQ(lc_c.cpu_c.pc, 2);
         `ASSERT_EQ(lc_c.instr, 'h0049);
@@ -102,50 +108,56 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.halted, 0);
         `ASSERT_EQ(lc_c.cpu_c.pc, 3);
 
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 2);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 2);
         #CPU_CYCLE;
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], -16'd30);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], -16'd30);
         #CPU_CYCLE;
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
 
         load_instr("as/arith.mem", 10);
         while (lc_c.cpu_c.halted === 0) begin
-            // $display("pc: %x", lc_c.cpu_c.pc);
-            // $display("rt: %x, value: %x", lc_c.cpu_c.rt, lc_c.cpu_c.registers_c.reg_file[3]);
-            // $display("alu result: %x; op: %x; rs_val: %x; rt_val: %x", 
-            //     lc_c.cpu_c.alu_c.result, lc_c.cpu_c.alu_c.op, lc_c.cpu_c.alu_c.rs_val, lc_c.cpu_c.alu_c.rt_val);
-            // $display("reg1: %x", lc_c.cpu_c.registers_c.reg_file[1]);
             #CPU_CYCLE;
         end
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], -16'sd9);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], -16'sd9);
 
         load_instr("as/labels.mem", 4);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 1);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[3], 3);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 3);
 
         load_instr("as/beq.mem", 11);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 8);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 5);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 8);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 5);
 
         load_instr("as/j.mem", 4);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
 
         load_instr("as/data.mem", 4);
-        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_INSTR);
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_IDLE);
         `ASSERT_EQ(lc_c.mem_map_c.dram_addr, 0);
-        #(CPU_CYCLE >> 1);
+        #(SYS_CYCLE * 33);
+        // $display("%b", lc_c.cpu_c.cpu_clk_vals);
+        // $display(lc_c.cpu_c.clk_800k_count);
+        // $display(lc_c.cpu_c.cpu_clk);
+        // $display(lc_c.mem_map_c.pc);
+        // #(SYS_CYCLE);
+        // #(SYS_CYCLE);
+        // #(SYS_CYCLE);
+        // $display("%b", lc_c.cpu_c.cpu_clk_vals);
+        // $display(lc_c.cpu_c.clk_800k_count);
+        // $display(lc_c.cpu_c.cpu_clk);
+        // $display(lc_c.mem_map_c.pc);
         `ASSERT_EQ(lc_c.mem_map_c.instr, 'h6001);
         `ASSERT_EQ(lc_c.mem_map_c.pc, 1);
         #(CPU_CYCLE >> 1);
@@ -158,20 +170,23 @@ module lc_tb;
         `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_INSTR);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
         #SYS_CYCLE;
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_WAIT);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_ACTIVATE);
         #SYS_CYCLE;
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_WAIT);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_READ);
         #SYS_CYCLE;
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_WAIT);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_POST_READ_NOP);
-        #(SYS_CYCLE*3);
+        #(SYS_CYCLE*2);
         `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_INSTR_OUT);
-        `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
         `ASSERT_EQ(lc_c.mem_map_c.dram_write_en, 0);
         `ASSERT_EQ(lc_c.mem_map_c.dram_addr, 2);
         `ASSERT_EQ(lc_c.mem_map_c.write_en, 1);
         `ASSERT_EQ(lc_c.mem_map_c.dram_refresh_data, 0);
         `ASSERT_EQ(lc_c.sdram_ctl_c.refresh_data, 0);
         #(SYS_CYCLE);
+        `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
         `ASSERT_EQ(lc_c.sdram_ctl_c.refresh_data, 1);
         `ASSERT_EQ(lc_c.mem_map_c.dram_refresh_data, 1);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
@@ -206,28 +221,33 @@ module lc_tb;
 
 
         // $display("data: %x; we: %b", lc_c.mem_map_c.dram_data_in, lc_c.mem_map_c.dram_write_en);
-        // $display("pc: %x; reg1: %x; reg2: %x, mem[31]: %x; is_sw: %b", 
-        //     lc_c.cpu_c.pc,
-        //     lc_c.cpu_c.registers_c.reg_file[1],
-        //     lc_c.cpu_c.registers_c.reg_file[2],
-        //     lc_c.cpu_c.sdram_c.mem[31],
-        //     lc_c.cpu_c.is_sw
-        // );
         #CPU_CYCLE;
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h6001);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h6002);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h6001);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h6002);
         `ASSERT_EQ(lc_c.sdram_c.mem[31], 'h6002);
 
+        #CPU_CYCLE;
+
+        `ASSERT_EQ(lc_c.state, lc_c.STATE_RUNNING);
+        
+        // TODO figure this out... why do i need to put this twice
         load_instr("as/data2.mem", 7);
+        // RST = 0; #SYS_CYCLE;
+        // RST = 1;
+        // while (lc_c.state != lc_c.STATE_RUNNING) begin
+        //     #SYS_CYCLE;
+        // end
+
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[0], 0);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[1], 'h1);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[2], 'h4044);
-        `ASSERT_EQ(lc_c.cpu_c.registers_c.reg_file[3], 'h4042);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h4044);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 'h4042);
         `ASSERT_EQ(lc_c.sdram_c.mem[17], 'h4042);
+        $finish;
     end
 endmodule
 

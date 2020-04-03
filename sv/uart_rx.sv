@@ -15,11 +15,11 @@ module uart_rx #(parameter clks_per_bit = 325) (
     output reg data_ready
 );
     reg [7:0] data_write;
-    reg [7:0] clk_count = 0;
-    reg [5:0] sync_count = 0;
-    reg clk_baud = 0;
-    reg receiving = 0, clock_synced = 0, stop_clocked = 0;
-    reg [1:0] state = `STATE_IDLE, next_state = `STATE_IDLE;
+    reg [7:0] clk_count;
+    reg [5:0] sync_count;
+    reg clk_baud;
+    reg receiving, clock_synced, stop_clocked = 0;
+    reg [1:0] state, next_state;
 
     always @(posedge clk) begin
         clk_count += 1;
