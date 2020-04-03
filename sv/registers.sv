@@ -17,7 +17,7 @@ module registers(
     assign rt_val = reg_file[rt];
     assign rd_val = reg_file[rd];
 
-    always @(posedge clk) begin
+    always @(posedge clk, negedge rst) begin
         if (~rst) reg_file[0] = 0;
         if (write_en) begin
             // $display("writing value %x to register %x", reg_in, rd);

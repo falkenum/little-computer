@@ -22,7 +22,8 @@ module sdram_ctl(
     input [15:0] data_in,
     input refresh_data,
     output reg [15:0] data_out,
-    output reg data_ready
+    output reg data_ready,
+    output reg mem_ready
 );
 
 	// wait for 100 us, 5000 * 20 ns period
@@ -34,13 +35,13 @@ module sdram_ctl(
 	localparam STATE_RST_PRECHARGE = 1;
 	localparam STATE_RST_AUTO_REFRESH = 2;
 	localparam STATE_RST_MODE_WRITE = 3;
-	localparam STATE_ACTIVATE = 4;
-	localparam STATE_WRITE = 5;
-	localparam STATE_POST_WRITE_NOP = 6;
-	localparam STATE_READ = 7;
-	localparam STATE_POST_READ_NOP = 8;
-	localparam STATE_READ_COMPLETE = 9;
-	localparam STATE_IDLE = 10;
+	localparam STATE_IDLE = 4;
+	localparam STATE_ACTIVATE = 5;
+	localparam STATE_WRITE = 6;
+	localparam STATE_POST_WRITE_NOP = 7;
+	localparam STATE_READ = 8;
+	localparam STATE_POST_READ_NOP = 9;
+	localparam STATE_READ_COMPLETE = 10;
 
     localparam CMD_NOP = 3'b111;
     localparam CMD_PRE = 3'b010;
@@ -58,13 +59,12 @@ module sdram_ctl(
     assign dram_dq = drive_val ? dq_val : 16'bZ;
 
 
-	reg [31:0] wait_count = 0;
-    reg [STATE_WIDTH-1:0] state = STATE_RST_NOP;
-    reg [2:0] cmd = CMD_NOP;
-    reg [15:0] data_in_r, dq_val = 16'bZ;
+	reg [31:0] wait_count;
+    reg [STATE_WIDTH-1:0] state;
+    reg [2:0] cmd;
+    reg [15:0] data_in_r, dq_val;
     reg [24:0] addr_r;
-    reg write_en_r, drive_val = 0;
-    // reg inputs_changed;
+    reg write_en_r, drive_val;
 
     function [STATE_WIDTH-1:0] next_state_func;
         input [STATE_WIDTH-1:0] state;
@@ -83,7 +83,10 @@ module sdram_ctl(
             STATE_RST_MODE_WRITE:
                 next_state_func = STATE_IDLE;
             STATE_IDLE:
-                if (refresh_data) next_state_func = STATE_ACTIVATE;
+                if (refresh_data) begin
+                    // $display($time, " is the current time state change");
+                    next_state_func = STATE_ACTIVATE;
+                end
                 else next_state_func = state;
             STATE_ACTIVATE:
                 if (write_en_r) next_state_func = STATE_WRITE;
@@ -117,11 +120,10 @@ module sdram_ctl(
             state = STATE_RST_NOP;
             dq_val = 16'bZ;
             data_out = 0;
-            // inputs_changed = 1;
             data_ready = 0;
-
             write_en_r = 0;
             addr_r = 0;
+            mem_ready = 0;
 
 		end
         else state = next_state_func(state);
@@ -149,15 +151,12 @@ module sdram_ctl(
                 wait_count = 0;
             end
             STATE_IDLE: begin
-                // if (write_en != write_en_r || 
-                //     addr != addr_r || data_in != data_in_r)
-                //     inputs_changed = 1;
+                mem_ready = 1;
             end
             STATE_ACTIVATE: begin
                 write_en_r = write_en;
                 addr_r = addr;
                 data_in_r = data_in;
-                // inputs_changed = 0;
                 data_ready = 0;
 
                 cmd = CMD_ACT;

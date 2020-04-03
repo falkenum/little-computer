@@ -8,11 +8,12 @@ module cpu(
     output [`WORD_WIDTH-1:0] data_addr,
     output [`WORD_WIDTH-1:0] data_out,
     output reg [`WORD_WIDTH-1:0] pc,
-    output reg mem_write_en
+    output mem_write_en
 );
 
     assign data_addr = alu_out;
     assign data_out = rd_val;
+    assign mem_write_en = is_sw;
 
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
@@ -60,10 +61,9 @@ module cpu(
         .result(alu_out)
     );
 
-    always @(posedge clk) begin
+    always @(posedge clk, negedge rst) begin
         if (~rst) begin 
             pc = 0;
-            mem_write_en = 0;
         end
         else begin
             pc = halted ? pc : 
@@ -71,8 +71,8 @@ module cpu(
                 (jtype ? jimm_extended : pc + 1));
             // need to make sure word is clocked into mem following the sw instruction
             // to give time for alu to output the right value
-            if (mem_write_en) mem_write_en = 0;
-            if (is_sw) mem_write_en = 1;
+            // if (mem_write_en) mem_write_en = 0;
+            // if (is_sw) mem_write_en = 1;
         end
     end
 endmodule
