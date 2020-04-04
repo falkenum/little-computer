@@ -40,17 +40,10 @@ module lc_tb;
 
     initial begin
         forever begin
-            step_cycles(1);
-        end
-    end
-
-    task step_cycles(integer num_cycles);
-        repeat (num_cycles * (1 << `CPU_CLK_DIV_WIDTH)) begin
             #10 CLK = 1;
             #10 CLK = 0;
         end
-        // $display("pc: %x", lc_c.pc);
-    endtask
+    end
 
     task load_instr(string filename, integer length);
         $readmemh(filename, lc_c.sdram_c.mem, 0, length - 1);

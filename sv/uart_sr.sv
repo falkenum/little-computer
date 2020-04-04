@@ -10,7 +10,7 @@ module uart_sr(
 );
 
     reg clocked_first_byte = 0, uart_word_loaded = 0;
-    reg [3:0] byte_ready_vals = 0;
+    reg [1:0] byte_ready_vals = 0;
 
 
     always @(posedge clk) begin
@@ -21,7 +21,7 @@ module uart_sr(
             byte_ready_vals = 0;
             uart_word = 0;
         end else begin
-            if (byte_ready_vals[3] == 0 & byte_ready_vals [2:0] == 3'b111) begin
+            if (byte_ready_vals[1] == 0 & byte_ready_vals [0] == 1) begin
                 if (~clocked_first_byte) begin
                     uart_word = {uart_word[15:8], uart_byte};
                     clocked_first_byte = 1;
@@ -36,7 +36,7 @@ module uart_sr(
                 clocked_first_byte = 0;
             end
 
-            byte_ready_vals = {byte_ready_vals[2:0], uart_byte_ready};
+            byte_ready_vals = {byte_ready_vals[0], uart_byte_ready};
         end
 
     end

@@ -74,7 +74,7 @@ module little_computer(
     wire uart_rx = GPIO[8];
     wire sysrst = KEY[0];
     wire debug_mode = SW[0];
-    wire debug_clk = KEY[1];
+    wire debug_clk = ~KEY[1];
     wire load_en = SW[1];
     wire cpu_rst = sysrst & internal_cpu_rst;
     wire cpu_ready = state == STATE_RUNNING;
@@ -85,8 +85,6 @@ module little_computer(
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_byte;
     wire [24:0] mem_map_dram_addr;
-
-    wire [24:0] dram_read_addr = load_en ? {9'b0, uart_word_count} : mem_map_dram_addr; 
 
     sdram_ctl sdram_ctl_c(
         .dram_clk(DRAM_CLK),
@@ -104,8 +102,8 @@ module little_computer(
         .rst(sysrst),
         .clk(sysclk),
         .write_en(load_en ? 1'b1 : mem_map_dram_write_en),
-        .addr(dram_read_addr),
-        .refresh_data(mem_map_to_dram_refresh),
+        .addr(load_en ? uart_word_count : mem_map_dram_addr),
+        .refresh_data(load_en ? uart_word_ready : mem_map_to_dram_refresh),
         .data_in(load_en ? uart_word : mem_map_to_dram_data),
         .data_out(dram_data),
         .data_ready(dram_to_mem_map_data_ready),
@@ -126,8 +124,8 @@ module little_computer(
         .tx(uart_tx),
         .clk(sysclk),
         .rst(sysrst),
-        .data(8'hab),
-        .start_n(KEY[1]),
+        .data(),
+        .start_n(),
         .ready_to_send(uart_tx_ready)
     );
 
@@ -142,7 +140,7 @@ module little_computer(
 
     display display_c(
         .debug_en(debug_mode), 
-        .value({instr, dram_read_addr[7:0]}),
+        .value({instr, pc[7:0]}),
         // .value({dram_data_out, pc[7:0]}),
         .hex({HEX5, HEX4, HEX3, HEX2, HEX1, HEX0})
     );
@@ -212,7 +210,7 @@ module little_computer(
             end
         endcase
 
-        // inc counter on negedge of uart_word_ready
+        // inc counter on negedge of uart_word_ready, its value is used on the posedge by sdram
         if (uart_word_ready_vals[1] == 1 && uart_word_ready_vals[0] == 0) begin
             uart_word_count += 16'b1;
         end
