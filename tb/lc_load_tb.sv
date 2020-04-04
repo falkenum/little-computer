@@ -140,10 +140,8 @@ module lc_load_tb;
         `ASSERT_EQ(lc_c.sdram_ctl_c.addr_r, 'h1);
 
         `ASSERT_EQ(sdram_c.mem[1], 'h9825);
-        $display("%x", sdram_c.mem[1]);
         `ASSERT_EQ(lc_c.uart_word_count, 1);
 
-        $display("test");
         load_en = 0;
         rst = 0; #SYS_CYCLE;
         #SYS_CYCLE;
@@ -151,7 +149,6 @@ module lc_load_tb;
         `ASSERT_EQ(lc_c.pc, 0);
         `ASSERT_EQ(lc_c.sysrst, 0);
         `ASSERT_EQ(lc_c.cpu_c.rst, 0);
-        $display(lc_c.pc);
         rst = 1; #SYS_CYCLE;
 
 

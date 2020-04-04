@@ -5,6 +5,7 @@ module mem_map(
     input [`WORD_WIDTH-1:0] data_addr,
     input [`WORD_WIDTH-1:0] data_in,
     input [`WORD_WIDTH-1:0] dram_read_data,
+    input uart_tx_ready,
     input dram_data_ready,
     input cpu_ready,
     input write_en,
@@ -16,12 +17,17 @@ module mem_map(
     output reg [15:0] dram_data_in,
     output reg [15:0] read_data,
     output reg [15:0] instr,
-    output reg [9:0] led
+    output reg [9:0] led,
+    output reg [7:0] uart_tx_byte,
+    output reg uart_tx_start_n
+
 );
     localparam DRAM_FIRST = 16'h0;
     localparam DRAM_LAST = 16'hF7FF;
     localparam LED_FIRST = 16'hF800;
     localparam LED_LAST = 16'hF809;
+    localparam UART_TX_READY = 16'hF80A;
+    localparam UART_TX_BYTE = 16'hF80B;
     localparam STATE_IDLE = 0;
     localparam STATE_FETCH_INSTR = 1;
     localparam STATE_WAIT = 2;
@@ -33,8 +39,8 @@ module mem_map(
     reg [3:0] wait_count;
     reg [`WORD_WIDTH-1:0] last_pc;
     reg got_instr;
+    reg [1:0] uart_tx_ready_vals;
 
-    // wire pc_changed = pc_vals[1] == pc_vals[0] && pc_vals[2] != pc_vals[1];
     assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_FETCH_DATA;
 
     function [2:0] next_state_func;
@@ -59,13 +65,22 @@ module mem_map(
         endcase
     endfunction
 
+
     always @(posedge clk) begin
+        // reset start_n as on posedge of uart_tx_ready
+        uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
+        if (uart_tx_ready_vals[1] == 0 && uart_tx_ready_vals[0] == 1) begin
+            // $display("resetting start_n");
+            uart_tx_start_n = 1;
+        end
+
         if (~rst) begin
             state = STATE_IDLE;
             last_pc = 0;
             wait_count = 0;
             got_instr = 0;
-
+            uart_tx_start_n = 1;
+            uart_tx_ready_vals = 2'b11;
             // nop
             instr = 'hF000;
         end
@@ -87,9 +102,6 @@ module mem_map(
                 got_instr = 0;
             end
             STATE_WAIT: begin
-                // reset the flag after the first wait cycle
-                // to give sdram_ctl a chance to read it
-                // if(wait_count == 1) dram_refresh_data = 0;
                 wait_count += 1;
             end
             STATE_INSTR_OUT: begin
@@ -106,14 +118,28 @@ module mem_map(
                     dram_write_en = 1'b0;
                 end
 
+                // $display("fetching/writing to addr %x", data_addr);
                 if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
                     led[data_addr - LED_FIRST] = data_in[0];
                 end
+
+                if (write_en && data_addr == UART_TX_BYTE) begin
+                    
+                    // $display("writing tx byte %x", data_in[7:0]);
+                    uart_tx_byte = data_in[7:0];
+                    uart_tx_start_n = 0;
+                end
+
                 wait_count = 0;
-                // $display($time, " is the current time at refresh");
             end
             STATE_DATA_OUT: begin
-                read_data = dram_read_data;
+                if (data_addr == UART_TX_READY) begin   
+                    read_data = uart_tx_ready ? 16'b1 : 16'b0;
+                end
+                else begin
+                    read_data = dram_read_data;
+                end
+
             end
         endcase
 

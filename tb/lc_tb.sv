@@ -46,10 +46,10 @@ module lc_tb;
     end
 
     task load_instr(string filename, integer length);
-        $readmemh(filename, lc_c.sdram_c.mem, 0, length - 1);
+        $readmemh(filename, sdram_c.mem, 0, length - 1);
         RST = 0; #SYS_CYCLE;
 
-        RST = 1;
+        RST = 1; #SYS_CYCLE;
         while (lc_c.state != lc_c.STATE_RUNNING) begin
             #SYS_CYCLE;
         end

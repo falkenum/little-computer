@@ -41,6 +41,7 @@ module uart_rx #(parameter clks_per_bit = 325) (
 
     always @(posedge clk) begin
         if (~rst) begin
+            $display("resetting rx");
             sync_count = 0;
             receiving = 0;
             clock_synced = 0;
@@ -51,6 +52,7 @@ module uart_rx #(parameter clks_per_bit = 325) (
             clk_baud_vals = 2'b00;
             clk_count = 0;
             clk_baud = 0;
+            
 
             state = STATE_IDLE;
         end

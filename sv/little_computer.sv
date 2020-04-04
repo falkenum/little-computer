@@ -57,8 +57,7 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
     localparam STATE_RESET = 0;
-    localparam STATE_CPU_RESET = 1;
-    localparam STATE_RUNNING = 2;
+    localparam STATE_RUNNING = 1;
 
     assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_tx, uart_rx};
     assign GPIO[9] = uart_tx;
@@ -80,10 +79,11 @@ module little_computer(
     wire cpu_ready = state == STATE_RUNNING;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
-        mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx;
+        mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx,
+        uart_tx_start_n;
     wire [`WORD_WIDTH-1:0] uart_word, dram_data, mem_map_to_dram_data,
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
-    wire [7:0] uart_byte;
+    wire [7:0] uart_rx_byte, uart_tx_byte;
     wire [24:0] mem_map_dram_addr;
 
     sdram_ctl sdram_ctl_c(
@@ -112,7 +112,7 @@ module little_computer(
 
     uart_sr uart_sr_c(
         .uart_byte_ready(uart_byte_ready),
-        .uart_byte(uart_byte),
+        .uart_byte(uart_rx_byte),
         .rst(sysrst),
         .clk(sysclk),
         .uart_word_ready(uart_word_ready),
@@ -124,8 +124,8 @@ module little_computer(
         .tx(uart_tx),
         .clk(sysclk),
         .rst(sysrst),
-        .data(),
-        .start_n(),
+        .data(uart_tx_byte),
+        .start_n(uart_tx_start_n),
         .ready_to_send(uart_tx_ready)
     );
 
@@ -134,7 +134,7 @@ module little_computer(
         .rx(uart_rx),
         .clk(sysclk),
         .rst(sysrst),
-        .data(uart_byte),
+        .data(uart_rx_byte),
         .data_ready(uart_byte_ready)
     );
 
@@ -153,6 +153,8 @@ module little_computer(
         .data_in(cpu_data),
         .clk(sysclk),
         .rst(sysrst),
+        .uart_tx_ready(uart_tx_ready),
+
 
         .dram_data_ready(dram_to_mem_map_data_ready),
         .cpu_ready(cpu_ready),
@@ -161,6 +163,8 @@ module little_computer(
         .dram_write_en(mem_map_dram_write_en),
         .dram_data_in(mem_map_to_dram_data),
         .led(LEDR),
+        .uart_tx_byte(uart_tx_byte),
+        .uart_tx_start_n(uart_tx_start_n),
         .read_data(mem_map_lw_data),
         .instr(instr)
     );
@@ -187,6 +191,7 @@ module little_computer(
                 else next_state_func = state;
             STATE_RUNNING:
                 next_state_func = state;
+            default: next_state_func = STATE_RESET;
         endcase
         
     endfunction
