@@ -160,6 +160,7 @@ module little_computer(
         .dram_addr(mem_map_dram_addr),
         .dram_write_en(mem_map_dram_write_en),
         .dram_data_in(mem_map_to_dram_data),
+        .led(LEDR),
         .read_data(mem_map_lw_data),
         .instr(instr)
     );

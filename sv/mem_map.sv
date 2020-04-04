@@ -15,10 +15,13 @@ module mem_map(
     output reg dram_write_en,
     output reg [15:0] dram_data_in,
     output reg [15:0] read_data,
-    output reg [15:0] instr
+    output reg [15:0] instr,
+    output reg [9:0] led
 );
     localparam DRAM_FIRST = 16'h0;
     localparam DRAM_LAST = 16'hF7FF;
+    localparam LED_FIRST = 16'hF800;
+    localparam LED_LAST = 16'hF809;
     localparam STATE_IDLE = 0;
     localparam STATE_FETCH_INSTR = 1;
     localparam STATE_WAIT = 2;
@@ -101,6 +104,10 @@ module mem_map(
                 end else begin
                     dram_addr = 25'b0; 
                     dram_write_en = 1'b0;
+                end
+
+                if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
+                    led[data_addr - LED_FIRST] = data_in[0];
                 end
                 wait_count = 0;
                 // $display($time, " is the current time at refresh");
