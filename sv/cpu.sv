@@ -13,10 +13,12 @@ module cpu(
     output mem_write_en
 );
 
-    assign data_addr = alu_out;
+    assign data_addr = op == `OP_PUSH ? sp :
+                       (op == `OP_POP ? sp + 1 : alu_out);
     assign data_out = rd_val;
-    assign mem_write_en = is_sw;
+    assign mem_write_en = is_sw | op == `OP_PUSH;
 
+    reg [`WORD_WIDTH-1:0] lr, sp;
     reg [`WORD_WIDTH-1:0] reg_file [`NUM_REGS];
     reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count;
     reg [1:0] cpu_clk_vals;
@@ -24,12 +26,13 @@ module cpu(
     wire cpu_clk = debug_mode ? debug_clk : clk_800k_count[5];
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
-    wire jtype = op == `OP_J;
+    wire jtype = op == `OP_J | op == `OP_JL;
     wire is_lw = op == `OP_LW;
     wire is_sw = op == `OP_SW;
+    wire use_data_in = is_lw | (op == `OP_POP);
     wire itype = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b01;
     wire alu_use_imm = itype & ~is_beq;
-    wire reg_write_en = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b00 | op == `OP_ADDI | op == `OP_LW;
+    wire reg_write_en = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b00 | op == `OP_ADDI | op == `OP_LW | op == `OP_POP;
     wire beq_taken = is_beq & (rt_val == rd_val);
 
     wire [`OP_WIDTH-1:0] op = instr[`WORD_WIDTH-1:`WORD_WIDTH-`OP_WIDTH];
@@ -44,7 +47,7 @@ module cpu(
 
     wire [`WORD_WIDTH-1:0] imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
     wire [`WORD_WIDTH-1:0] jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
-    wire [`WORD_WIDTH-1:0] reg_in = is_lw ? data_in : alu_out;
+    wire [`WORD_WIDTH-1:0] reg_in = use_data_in ? data_in : alu_out;
 
     wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
     wire [`WORD_WIDTH-1:0] alu_out;
@@ -56,11 +59,14 @@ module cpu(
         .result(alu_out)
     );
 
+    localparam STACK_BEGIN = 16'hF7FF;
+
     always @(posedge clk) begin
         clk_800k_count += 1;
         cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
             pc = 0;
+            sp = STACK_BEGIN;
             clk_800k_count = 0;
             cpu_clk_vals = 2'b00;
             reg_file[0] = 0;
@@ -68,10 +74,14 @@ module cpu(
 
         // posedge of cpu clk
         else if (cpu_clk_vals[1] == 0 && cpu_clk_vals[0] == 1) begin
-            // $display("pc changed");
+            lr = op == `OP_JL ? pc + 1 : lr;
+            sp = op == `OP_PUSH ? sp - 1 :
+                 (op == `OP_POP ? sp + 1 : sp);
+
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
-                (jtype ? jimm_extended : pc + 1));
+                (jtype ? jimm_extended : 
+                (op == `OP_RTS ? lr : pc + 1)));
             if (reg_write_en) begin
                 // $display("rs_val: %x, rt_val: %x, rs: %x, rt: %x", rs_val, rt_val, rs, rt);
                 // $display("writing value %x to register %x", reg_in, rd);

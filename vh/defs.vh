@@ -24,6 +24,10 @@
 `define OP_LW 4'h6
 `define OP_SW 4'h7
 `define OP_J 4'h8
+`define OP_JL 4'h9
+`define OP_RTS 4'hA
+`define OP_PUSH 4'hB
+`define OP_POP 4'hC
 
 `define OP_HALT 4'hE
 `define OP_NOP 4'hF

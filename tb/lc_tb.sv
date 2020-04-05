@@ -224,13 +224,7 @@ module lc_tb;
 
         `ASSERT_EQ(lc_c.state, lc_c.STATE_RUNNING);
         
-        // TODO figure this out... why do i need to put this twice
         load_instr("as/data2.mem", 7);
-        // RST = 0; #SYS_CYCLE;
-        // RST = 1;
-        // while (lc_c.state != lc_c.STATE_RUNNING) begin
-        //     #SYS_CYCLE;
-        // end
 
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
@@ -240,6 +234,24 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h4044);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 'h4042);
         `ASSERT_EQ(lc_c.sdram_c.mem[17], 'h4042);
+
+        load_instr("as/subroutine.mem", 6);
+
+        while (lc_c.cpu_c.halted === 0) begin
+            #CPU_CYCLE;
+        end
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h1);
+        `ASSERT_EQ(lc_c.cpu_c.lr, 'h5);
+
+        load_instr("as/stack.mem", 16);
+
+        while (lc_c.cpu_c.halted === 0) begin
+            #CPU_CYCLE;
+        end
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[4], 'h1);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[5], 'h2);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[6], 'h3);
         $finish;
     end
 endmodule

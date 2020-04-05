@@ -84,22 +84,22 @@ module lc_load_tb;
         //     #CPU_CYCLE;
         // end
         // `ASSERT_EQ(lc_c.uart_tx_c.data, 'h74);
-        while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
-            #CPU_CYCLE;
-            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
-        end
-        while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
-            #CPU_CYCLE;
-            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
-        end
-        while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
-            #CPU_CYCLE;
-            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
-        end
-        while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
-            #CPU_CYCLE;
-            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
-        end
+        // while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
+        //     #CPU_CYCLE;
+        //     // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        // end
+        // while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
+        //     #CPU_CYCLE;
+        //     // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        // end
+        // while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
+        //     #CPU_CYCLE;
+        //     // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        // end
+        // while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
+        //     #CPU_CYCLE;
+        //     // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        // end
 
         // `ASSERT_EQ(lc_c.uart_tx_c., 'h74);
         // `ASSERT_EQ(data_received, 'h74);

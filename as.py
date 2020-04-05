@@ -11,14 +11,19 @@ op_to_code = {
     'lw': 0b0110,
     'sw': 0b0111,
     'j': 0b1000,
+    'jl': 0b1001,
+    'rts': 0b1010,
+    'push': 0b1011,
+    'pop': 0b1100,
     'halt': 0b1110,
     'nop': 0b1111
 }
-ktypes = {"halt", "nop"}
+ktypes = {"halt", "nop", "rts"}
 itypes = {"addi", "beq", "lw", "sw"}
 rtypes = {"add", "lsl", "and"}
 utypes = {"not"}
-jtypes = {"j"}
+stypes = {"push", "pop"}
+jtypes = {"j", "jl"}
 
 def get_machine_code(instr_str, pc, labels):
     instr_split = instr_str.split()
@@ -57,7 +62,7 @@ def get_machine_code(instr_str, pc, labels):
         # assert that it's 6 bits
         assert(first_arg >= -32 and first_arg < 32)
         first_arg &= 0x3f
-    elif op_str == "j":
+    elif op_str in jtypes:
         try:
             first_arg = instr_split[inst_i]
             first_arg = int(first_arg)
@@ -66,15 +71,16 @@ def get_machine_code(instr_str, pc, labels):
             first_arg = int(labels[first_arg])
         assert(first_arg >= 0 and first_arg < 1 << 12)
         first_arg_shamt = 0
-    else:
-        assert(op_str in rtypes | utypes)
+    elif op_str in rtypes | utypes:
         # else it's a register
         assert(instr_split[inst_i][0] == 'r')
         first_arg = int(instr_split[inst_i][1:])
         assert(first_arg < 8)
 
+
     instr |= first_arg << first_arg_shamt
-    inst_i += 1
+    if op_str not in stypes:
+        inst_i += 1
 
     # if it's a three arg instruction
     if op_str in rtypes | itypes:
@@ -87,6 +93,11 @@ def get_machine_code(instr_str, pc, labels):
     if op_str in rtypes | itypes | utypes:
         assert(instr_split[inst_i][0] == 'r')
         third_arg = int(instr_split[inst_i][1:]) 
+        assert(third_arg < 8)
+        instr |= third_arg
+    if op_str in stypes:
+        assert(instr_split[inst_i][0] == 'r')
+        third_arg = int(instr_split[inst_i][1:])
         assert(third_arg < 8)
         instr |= third_arg
     return instr
@@ -111,7 +122,9 @@ def get_instructions(lines, labels):
 
         # if it's a label
         if line[-1] == ':':
-            labels[line[:-1]] = lines_i
+            label = line[:-1]
+            assert(label not in labels)
+            labels[label] = lines_i
             continue
 
         # if it's a string directive, convert it to a bunch of word directives
@@ -133,7 +146,7 @@ def get_instructions(lines, labels):
     return instructions
 
 def main():
-    assert (ktypes | itypes | rtypes | utypes | jtypes == op_to_code.keys())
+    assert (ktypes | itypes | rtypes | utypes | stypes | jtypes == op_to_code.keys())
 
     if len(sys.argv) != 2:
         raise Exception("invalid call")
