@@ -67,8 +67,8 @@ module lc_load_tb;
 
     initial begin
         forever begin
-            #SYS_CYCLE clk = 1;
-            #SYS_CYCLE clk = 0;
+            #10 clk = 1;
+            #10 clk = 0;
         end
     end
 
@@ -78,23 +78,32 @@ module lc_load_tb;
 
     initial begin
 
-        load_instr("as/hello.mem", 7);
-        $monitor(uart_rx_c.state);
+        load_instr("as/hello.mem", 25);
 
-        while (lc_c.cpu_c.halted !== 1) begin
+        // while (lc_c.cpu_c.halted !== 1) begin
+        //     #CPU_CYCLE;
+        // end
+        // `ASSERT_EQ(lc_c.uart_tx_c.data, 'h74);
+        while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
             #CPU_CYCLE;
-            $display("pc: %x, instr: %x", lc_c.pc, lc_c.instr);
+            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
         end
-        `ASSERT_EQ(lc_c.uart_tx_c.data, 'h74);
-        while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE)
+        while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
             #CPU_CYCLE;
-        // $display(lc_c.uart_tx_c.state);
-        while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE)
+            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        end
+        while (lc_c.uart_tx_c.state === lc_c.uart_tx_c.STATE_IDLE) begin
             #CPU_CYCLE;
+            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        end
+        while (lc_c.uart_tx_c.state !== lc_c.uart_tx_c.STATE_IDLE) begin
+            #CPU_CYCLE;
+            // $display("pc: %x, instr: %x, r3: %x", lc_c.pc, lc_c.instr, lc_c.cpu_c.reg_file[3]);
+        end
 
         // `ASSERT_EQ(lc_c.uart_tx_c., 'h74);
-        `ASSERT_EQ(data_received, 'h74);
-        $display("%x", data_received);
+        // `ASSERT_EQ(data_received, 'h74);
+        // $display("%x", data_received);
         $finish;
     end
 endmodule

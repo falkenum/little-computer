@@ -15,6 +15,7 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
     reg [7:0] data_sr;
     integer clk_count;
     reg clk_baud;
+    reg start_next_clk_baud;
     reg [1:0] state;
     reg [1:0] start_n_vals;
     reg [1:0] clk_baud_vals;
@@ -27,7 +28,7 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
         input [1:0] state;
         case (state)
             STATE_IDLE: 
-                if (start_n_vals[1] == 1 && start_n_vals[0] == 0) next_state_func = STATE_START;
+                if (start_next_clk_baud) next_state_func = STATE_START;
                 else next_state_func = state;
             STATE_START:
                 next_state_func = STATE_DATA;
@@ -46,6 +47,7 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
             clk_count = 0;
         end
         clk_baud_vals = {clk_baud_vals[0], clk_baud};
+        start_n_vals = {start_n_vals[0], start_n};
         if (~rst) begin
             clk_baud = 0;
             data_sr = 0;
@@ -54,8 +56,11 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
             state = STATE_IDLE;
             start_n_vals = 2'b00;
             clk_count = 0;
+            start_next_clk_baud = 0;
         end
-        // if (clk_baud_vals != 0 && clk_baud_vals != 'b11) $display("baud vals: %b", clk_baud_vals);
+        if (start_n_vals[1] == 1 && start_n_vals[0] == 0) begin
+            start_next_clk_baud = 1;
+        end
         if (clk_baud_vals[1] == 0 && clk_baud_vals[0] == 1) begin
             state = next_state_func(state);
             case (state)
@@ -65,6 +70,7 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
                 end
                 STATE_START: begin
                     data_sr = data;
+                    start_next_clk_baud = 0;
                     ready_to_send = 0;
                     tx = 0;
                     data_write = 1;
@@ -78,7 +84,6 @@ module uart_tx #(parameter clks_per_bit = 325*16) (
                     tx = 1;
                 end
             endcase
-            start_n_vals = {start_n_vals[0], start_n};
         end
 
     end

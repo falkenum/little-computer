@@ -42,8 +42,8 @@ module uart_tb();
 
     initial begin
         forever begin
-            clk = 1; #SYS_CYCLE;
-            clk = 0; #SYS_CYCLE;
+            clk = 1; #10;
+            clk = 0; #10;
         end
     end
 
@@ -51,41 +51,45 @@ module uart_tb();
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
         data_to_send = 'hAB;
-        start_n = 1; #BAUD_CYCLE;
+        // $display("%b", uart_tx_c.start_n_vals);
+        start_n = 1; 
+        // while (uart_tx_c.state !== uart_tx_c.STATE_IDLE) begin
+        //     #BAUD_CYCLE;
+        // end
+        #SYS_CYCLE;
         start_n = 0;
-        // $display("start low at ", $time);
-        // $display("count: %d", uart_tx_c.clk_count);
-        while (uart_rx_c.state == uart_rx_c.STATE_IDLE) begin
-            // $display("idle");
-            #BAUD_CYCLE;
-        end
+        #SYS_CYCLE;
+
+        // while (uart_tx_c.state !== uart_tx_c.STATE_START) begin
+    
+        //     #BAUD_CYCLE;
+        // end
         start_n = 1;
-        while (uart_rx_c.state == uart_rx_c.STATE_START) begin
+        // while (uart_tx_c.state !== uart_tx_c.STATE_DATA) begin
+        //     #BAUD_CYCLE;
+        // end
+        `ASSERT_EQ(uart_tx_c.state, uart_tx_c.STATE_IDLE);
+        while (uart_tx_c.state !== uart_tx_c.STATE_START) begin
             #BAUD_CYCLE;
         end
-        while (uart_rx_c.state == uart_rx_c.STATE_DATA) begin
-            #BAUD_CYCLE;
-        end
-        while (uart_rx_c.state != uart_rx_c.STATE_IDLE) begin
+        while (uart_tx_c.state !== uart_tx_c.STATE_IDLE) begin
             #BAUD_CYCLE;
         end
 
         `ASSERT_EQ(uart_byte, 'hAB);
         `ASSERT_EQ(byte_ready, 1);
         data_to_send = 'hCD;
-        start_n = 1; #BAUD_CYCLE;
-        start_n = 0;
-        while (uart_rx_c.state == uart_rx_c.STATE_IDLE) begin
-            #BAUD_CYCLE;
-        end
         start_n = 1;
-        while (uart_rx_c.state == uart_rx_c.STATE_START) begin
+        #SYS_CYCLE;
+        start_n = 0;
+        #SYS_CYCLE;
+        
+        // while (uart_rx_c.state === uart_rx_c.STATE_IDLE) begin
+        start_n = 1;
+        while (uart_tx_c.state !== uart_tx_c.STATE_START) begin
             #BAUD_CYCLE;
         end
-        while (uart_rx_c.state == uart_rx_c.STATE_DATA) begin
-            #BAUD_CYCLE;
-        end
-        while (uart_rx_c.state != uart_rx_c.STATE_IDLE) begin
+        while (uart_tx_c.state !== uart_tx_c.STATE_IDLE) begin
             #BAUD_CYCLE;
         end
         `ASSERT_EQ(word_ready, 1);

@@ -60,8 +60,8 @@ module lc_load_tb;
 
     initial begin
         forever begin
-            #SYS_CYCLE clk = 1;
-            #SYS_CYCLE clk = 0;
+            #10 clk = 1;
+            #10 clk = 0;
         end
     end
 

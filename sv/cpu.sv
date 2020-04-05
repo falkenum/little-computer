@@ -68,6 +68,7 @@ module cpu(
 
         // posedge of cpu clk
         else if (cpu_clk_vals[1] == 0 && cpu_clk_vals[0] == 1) begin
+            // $display("pc changed");
             pc = halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : pc + 1));

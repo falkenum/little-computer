@@ -1,4 +1,4 @@
-import os, sys, subprocess
+import os, sys, subprocess, re, codecs
 from pathlib import Path
 
 op_to_code = {
@@ -112,6 +112,20 @@ def get_instructions(lines, labels):
         # if it's a label
         if line[-1] == ':':
             labels[line[:-1]] = lines_i
+            continue
+
+        # if it's a string directive, convert it to a bunch of word directives
+
+        if line.split()[0] == ".string":
+            literal = re.search(r'\.string "(.+)"', line).group(1)
+            assert(literal)
+            literal = codecs.decode(literal, 'unicode-escape')
+            ba = bytearray(literal, 'ascii')
+            for b in ba:
+                instructions.append(f".word {b:04x}")
+            
+            instructions.append(".word 0000")
+            lines_i += len(literal) + 1
             continue
 
         instructions.append(line)
