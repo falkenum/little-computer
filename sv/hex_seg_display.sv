@@ -1,6 +1,6 @@
 `include "defs.vh"
 
-module display(
+module hex_seg_display(
     input debug_en,
     input [23:0] value,
     output [5:0][7:0] hex

@@ -69,7 +69,7 @@ module mem_map(
     always @(posedge clk) begin
         // reset start_n as on posedge of uart_tx_ready
         uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
-        if (uart_tx_ready_vals[1] == 0 && uart_tx_ready_vals[0] == 1) begin
+        if (uart_tx_ready_vals == 2'b01) begin
             // $display("resetting start_n");
             uart_tx_start_n = 1;
         end

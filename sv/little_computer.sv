@@ -85,6 +85,16 @@ module little_computer(
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_rx_byte, uart_tx_byte;
     wire [24:0] mem_map_dram_addr;
+    vga vga_c(
+        .clk(sysclk),           // base clock
+        .rst(sysrst),           // reset: restarts frame
+        .hs(VGA_HS),           // horizontal sync
+        .vs(VGA_VS),           // vertical sync
+        .rval(VGA_R),
+        .gval(VGA_G),
+        .bval(VGA_B)
+        // .vblank()     // high during blanking interval
+    );
 
     sdram_ctl sdram_ctl_c(
         .dram_clk(DRAM_CLK),
@@ -138,7 +148,7 @@ module little_computer(
         .data_ready(uart_byte_ready)
     );
 
-    display display_c(
+    hex_seg_display hex_c(
         .debug_en(debug_mode), 
         .value({instr, pc[7:0]}),
         // .value({dram_data_out, pc[7:0]}),
