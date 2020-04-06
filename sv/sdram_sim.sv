@@ -16,6 +16,7 @@ module sdram_sim(
     localparam CMD_ACT = 3'b011;
     localparam CMD_READ = 3'b101;
     localparam CMD_WRITE = 3'b100;
+    localparam CMD_BST = 3'b110;
 
     localparam STATE_IDLE = 0;
     localparam STATE_ACTIVATED = 1;
@@ -24,9 +25,10 @@ module sdram_sim(
 
     wire [2:0] cmd = {ras_n, cas_n, we_n};
     reg [1:0] state = STATE_IDLE;
-    reg [15:0] mem [1 << 8];
+    reg [15:0] mem [1 << 19];
     reg precharged = 0, drive_val = 0;
     reg [15:0] dq_val;
+    reg [6:0] state_read_count = 0;
     assign dq = drive_val ? dq_val : 16'bZ;
 
     function [1:0] next_state_func;
@@ -42,9 +44,9 @@ module sdram_sim(
                 else next_state_func = state;
             STATE_CMD_WRITE:
                 next_state_func = STATE_IDLE;
-            STATE_CMD_READ: begin
-                next_state_func = STATE_IDLE;
-            end
+            STATE_CMD_READ:
+                if ((state_read_count >= 2 && cmd == CMD_BST) || state_read_count == 66) next_state_func = STATE_IDLE;
+                else next_state_func = state;
             default: next_state_func = STATE_IDLE;
         endcase
     endfunction
@@ -53,18 +55,20 @@ module sdram_sim(
         state = next_state_func(state);
         case(state)
             STATE_IDLE: begin
-                // precharged = 0;
+                state_read_count = 0;
             end
             STATE_ACTIVATED: begin
-                drive_val = 0;
             end
             STATE_CMD_WRITE: begin
-                mem[addr[7:0]] = dq;
+                $display("writing %x to addr %x", dq, addr);
+                mem[addr[18:0]] = dq;
+                $display("reading %x from addr %x", mem[addr[18:0]], addr);
             end
             STATE_CMD_READ: begin
-                // if (addr[10]) precharged = 1;
-                // $display("clocked precharged: %b", precharged);
-                dq_val = mem[addr[7:0]];
+                state_read_count += 1;
+
+                if (state_read_count >= 2)
+                    dq_val = mem[addr[18:0] + state_read_count - 2];
                 drive_val = 1;
             end
         endcase

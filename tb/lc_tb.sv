@@ -170,7 +170,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_READ);
         #SYS_CYCLE;
         `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_WAIT);
-        `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_POST_READ_NOP);
+        `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_POST_READ);
         #(SYS_CYCLE*2);
         `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_INSTR_OUT);
         `ASSERT_EQ(lc_c.mem_map_c.dram_write_en, 0);

@@ -189,7 +189,7 @@ module mem_map_tb;
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
 
         #SYS_CYCLE;
-        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ_NOP);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
         #SYS_CYCLE;
         #SYS_CYCLE;

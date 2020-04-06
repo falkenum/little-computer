@@ -17,7 +17,7 @@ module sdram_ctl(
     input clk, 
     input write_en,
 
-    // 2**25 addresses for 16 bit words
+    input burst_en,
     input [24:0] addr,
     input [15:0] data_in,
     input refresh_data,
@@ -39,7 +39,8 @@ module sdram_ctl(
 	localparam STATE_ACTIVATE = 5;
 	localparam STATE_WRITE = 6;
 	localparam STATE_READ = 7;
-	localparam STATE_POST_READ_NOP = 8;
+	localparam STATE_POST_READ = 8;
+	localparam STATE_BURST_STOP = 9;
 
     localparam CMD_NOP = 3'b111;
     localparam CMD_PRE = 3'b010;
@@ -48,6 +49,7 @@ module sdram_ctl(
     localparam CMD_ACT = 3'b011;
     localparam CMD_READ = 3'b101;
     localparam CMD_WRITE = 3'b100;
+    localparam CMD_BST = 3'b110;
 
     assign dram_cke = 1;
     assign dram_clk = clk;
@@ -56,14 +58,14 @@ module sdram_ctl(
     assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
     assign dram_dq = drive_val ? dq_val : 16'bZ;
 
-    wire drive_val = state == STATE_WRITE;
-
 	reg [31:0] wait_count;
     reg [STATE_WIDTH-1:0] state;
     reg [2:0] cmd;
     reg [15:0] data_in_r, dq_val;
     reg [24:0] addr_r;
     reg write_en_r;
+    reg [5:0] post_read_count;
+    reg drive_val;
 
     function [STATE_WIDTH-1:0] next_state_func;
         input [STATE_WIDTH-1:0] state;
@@ -94,13 +96,20 @@ module sdram_ctl(
                 next_state_func = STATE_IDLE;
             end
             STATE_READ: begin
-                next_state_func = STATE_POST_READ_NOP;
+                next_state_func = STATE_POST_READ;
             end
-            STATE_POST_READ_NOP:
-                // CAS latency is 2
-                if (wait_count == 2) next_state_func = STATE_IDLE;
+            STATE_POST_READ: begin
+                // CAS latency is 2, 
+                if ((~burst_en && post_read_count == 2) ||
+                 (burst_en && post_read_count == 34)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
+                // $display("burst en: %b, read count: %d", burst_en, post_read_count);
+            end
+            STATE_BURST_STOP: begin
+                next_state_func = STATE_IDLE;
+            end
             default: next_state_func = STATE_RST_NOP;
+
         endcase
         
     endfunction
@@ -115,7 +124,8 @@ module sdram_ctl(
             write_en_r = 0;
             addr_r = 0;
             mem_ready = 0;
-
+            post_read_count = 0;
+            drive_val = 0;
 		end
         else state = next_state_func(state);
         wait_count += 1;
@@ -137,21 +147,22 @@ module sdram_ctl(
             STATE_RST_MODE_WRITE: begin
                 cmd = CMD_MRS;
                 dram_ba = 2'b00;
-                // CAS latency = 2, burst length 1
-                dram_addr[12:0] = {3'b000, 1'b0, 2'b0, 3'b010, 1'b0, 3'b000};
+                // CAS latency = 2, burst length 64, single write
+                dram_addr[12:0] = {3'b000, 1'b1, 2'b0, 3'b010, 1'b0, 3'b111};
                 wait_count = 0;
             end
             STATE_IDLE: begin
                 cmd = CMD_NOP;
                 mem_ready = 1;
                 data_ready = 1;
-                data_out = dram_dq;
+                post_read_count = 0;
             end
             STATE_ACTIVATE: begin
                 write_en_r = write_en;
                 addr_r = addr;
                 data_in_r = data_in;
                 data_ready = 0;
+                drive_val = 0;
 
                 cmd = CMD_ACT;
                 {dram_ba, dram_addr} = addr_r[24:10];
@@ -160,15 +171,20 @@ module sdram_ctl(
                 cmd = CMD_WRITE;
                 dq_val = data_in_r;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
+                drive_val = 1;
             end
             STATE_READ: begin
                 cmd = CMD_READ;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
                 wait_count = 0;
             end
-            STATE_POST_READ_NOP: begin
+            STATE_POST_READ: begin
                 cmd = CMD_NOP;
+                post_read_count += 1;
+                if (post_read_count >= 2) data_out = dram_dq;
             end
+            STATE_BURST_STOP:
+                cmd = CMD_BST;
         endcase
     
 

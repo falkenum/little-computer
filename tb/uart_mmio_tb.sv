@@ -78,7 +78,7 @@ module lc_load_tb;
 
     initial begin
 
-        load_instr("as/hello.mem", 25);
+        // load_instr("as/hello.mem", 25);
 
         // while (lc_c.cpu_c.halted !== 1) begin
         //     #CPU_CYCLE;

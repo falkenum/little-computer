@@ -9,6 +9,7 @@ module sdram_ctl_tb;
     reg [24:0] addr;
     reg [15:0] data_in;
     reg refresh_data = 1;
+    reg burst_en = 0;
 
     wire [15:0] data_out;
 
@@ -38,6 +39,7 @@ module sdram_ctl_tb;
         .data_in(data_in),
         .data_out(data_out),
         .refresh_data(refresh_data),
+        .burst_en(burst_en),
 
         .dram_addr(dram_addr),
         .dram_ba(ba),
@@ -78,18 +80,19 @@ module sdram_ctl_tb;
         `ASSERT_EQ(sdram_c.state, sdram_c.STATE_ACTIVATED);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ);
         #20;
-        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ_NOP);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
         `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_READ);
         `ASSERT_EQ(sdram_c.drive_val, 1);
         #20;
-        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ_NOP);
-        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_READ);
         #20;
         addr = 0;
         data_in = 'hff;
         write_en = 1;
-        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
-        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_READ);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_BURST_STOP);
+        #20;
         #20;
         `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
@@ -100,9 +103,11 @@ module sdram_ctl_tb;
         #20;
         // `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_WRITE_NOP);
         `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_WRITE);
+        `ASSERT_EQ(sdram_c.dq, 'hff);
         #20;
         `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
         `ASSERT_EQ(sdram_c.mem[0], 'hff);
+        $display("%x", sdram_c.mem[0]);
         #20;
         addr = 1;
         data_in = 'hfe;
@@ -116,7 +121,6 @@ module sdram_ctl_tb;
 
         #(10*20);
         // `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ_COMPLETE);
-        `ASSERT_EQ(data_out, 'hfe);
         addr = 0;
         data_in = 'hfe;
         write_en = 0;
@@ -133,5 +137,12 @@ module sdram_ctl_tb;
         #100;
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
         `ASSERT_EQ(sdram_ctl_c.data_ready, 1);
+
+        addr = 3;
+        data_in = 'hab;
+        write_en = 0;
+        refresh_data = 0;
+        burst_en = 1;
+
     end
 endmodule
