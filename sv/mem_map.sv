@@ -9,17 +9,22 @@ module mem_map(
     input dram_data_ready,
     input cpu_ready,
     input write_en,
+    input vga_en,
+    input [4:0] vga_x_group,
+    input [8:0] vga_y_val,
     input clk,
     input rst,
     output dram_refresh_data,
     output reg [24:0] dram_addr,
     output reg dram_write_en,
+    output reg dram_burst_en,
     output reg [15:0] dram_data_in,
     output reg [15:0] read_data,
     output reg [15:0] instr,
     output reg [9:0] led,
     output reg [7:0] uart_tx_byte,
-    output reg uart_tx_start_n
+    output reg uart_tx_start_n,
+    output reg [31:0][11:0] vga_bgr_buf
 
 );
     localparam DRAM_FIRST = 16'h0;
@@ -28,14 +33,14 @@ module mem_map(
     localparam LED_LAST = 16'hF809;
     localparam UART_TX_READY = 16'hF80A;
     localparam UART_TX_BYTE = 16'hF80B;
+    localparam VGA_WRITE = 16'hF80C;
 
     // write 1: x
     // write 2: y
     // write 3: BGR
-    localparam VGA_WRITE = 16'hF80C;
-    localparam VGA_STATE_X = 0;
-    localparam VGA_STATE_Y = 1;
-    localparam VGA_STATE_BGR = 2;
+    localparam VGA_WRITE_STATE_X = 0;
+    localparam VGA_WRITE_STATE_Y = 1;
+    localparam VGA_WRITE_STATE_BGR = 2;
 
     localparam STATE_IDLE = 0;
     localparam STATE_FETCH_INSTR = 1;
@@ -49,7 +54,7 @@ module mem_map(
     reg [`WORD_WIDTH-1:0] last_pc;
     reg got_instr;
     reg [1:0] uart_tx_ready_vals;
-    reg [1:0] vga_state;
+    reg [1:0] vga_write_state;
     reg [9:0] vga_x;
     reg [8:0] vga_y;
 
@@ -93,7 +98,8 @@ module mem_map(
             got_instr = 0;
             uart_tx_start_n = 1;
             uart_tx_ready_vals = 2'b11;
-            vga_state = VGA_STATE_X;
+            vga_write_state = VGA_WRITE_STATE_X;
+            dram_burst_en = 1'b0;
             // nop
             instr = 'hF000;
         end
@@ -144,22 +150,23 @@ module mem_map(
                 end
 
                 if (write_en && data_addr == VGA_WRITE) begin
-                    case(vga_state)
-                        VGA_STATE_X: begin
+                    case(vga_write_state)
+                        VGA_WRITE_STATE_X: begin
                             vga_x = data_in[9:0];
-                            vga_state = VGA_STATE_Y;
+                            vga_write_state = VGA_WRITE_STATE_Y;
                         end
-                        VGA_STATE_Y: begin
+                        VGA_WRITE_STATE_Y: begin
                             vga_y = data_in[8:0];
-                            vga_state = VGA_STATE_BGR;
+                            vga_write_state = VGA_WRITE_STATE_BGR;
                         end
-                        VGA_STATE_BGR: begin
-                            dram_addr = {6'b0, vga_x, vga_y};
+                        VGA_WRITE_STATE_BGR: begin
+                            // pixels start at address 'h80000
+                            dram_addr = {6'b1, vga_x, vga_y};
                             dram_write_en = 1'b1;
                             dram_data_in = data_in;
-                            vga_state = VGA_STATE_X;
+                            vga_write_state = VGA_WRITE_STATE_X;
                         end
-                        default: vga_state = VGA_STATE_X;
+                        default: vga_write_state = VGA_WRITE_STATE_X;
                     endcase
                 end
 

@@ -170,8 +170,10 @@ module sdram_ctl(
             STATE_WRITE: begin
                 cmd = CMD_WRITE;
                 dq_val = data_in_r;
+                // $display("writing val %x to addr %x", dq_val, addr);
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
                 drive_val = 1;
+                // $display("dram_addr during write: %x", dram_addr);
             end
             STATE_READ: begin
                 cmd = CMD_READ;
@@ -181,7 +183,9 @@ module sdram_ctl(
             STATE_POST_READ: begin
                 cmd = CMD_NOP;
                 post_read_count += 1;
-                if (post_read_count >= 2) data_out = dram_dq;
+                if (post_read_count >= 2) begin
+                    data_out = dram_dq;
+                end
             end
             STATE_BURST_STOP:
                 cmd = CMD_BST;

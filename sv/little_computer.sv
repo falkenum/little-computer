@@ -80,7 +80,7 @@ module little_computer(
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
         mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx,
-        uart_tx_start_n;
+        uart_tx_start_n, mem_map_dram_burst_en;
     wire [`WORD_WIDTH-1:0] uart_word, dram_data, mem_map_to_dram_data,
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_rx_byte, uart_tx_byte;
@@ -115,6 +115,8 @@ module little_computer(
         .addr(load_en ? uart_word_count : mem_map_dram_addr),
         .refresh_data(load_en ? uart_word_ready : mem_map_to_dram_refresh),
         .data_in(load_en ? uart_word : mem_map_to_dram_data),
+        .burst_en(mem_map_dram_burst_en),
+
         .data_out(dram_data),
         .data_ready(dram_to_mem_map_data_ready),
         .mem_ready(dram_ready)
@@ -172,6 +174,7 @@ module little_computer(
         .dram_addr(mem_map_dram_addr),
         .dram_write_en(mem_map_dram_write_en),
         .dram_data_in(mem_map_to_dram_data),
+        .dram_burst_en(mem_map_dram_burst_en),
         .led(LEDR),
         .uart_tx_byte(uart_tx_byte),
         .uart_tx_start_n(uart_tx_start_n),

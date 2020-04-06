@@ -1,5 +1,6 @@
 `include "defs.vh"
 
+`timescale 1ns /1ps
 module sdram_sim(
 	input		    [12:0]		addr,
 	input		     [1:0]		ba,
@@ -25,9 +26,10 @@ module sdram_sim(
 
     wire [2:0] cmd = {ras_n, cas_n, we_n};
     reg [1:0] state = STATE_IDLE;
-    reg [15:0] mem [1 << 19];
+    reg [15:0] mem [1<<25];
     reg precharged = 0, drive_val = 0;
     reg [15:0] dq_val;
+    reg [24:0] rw_addr;
     reg [6:0] state_read_count = 0;
     assign dq = drive_val ? dq_val : 16'bZ;
 
@@ -52,24 +54,31 @@ module sdram_sim(
     endfunction
 
     always @(posedge clk) begin
+        #1;
         state = next_state_func(state);
         case(state)
             STATE_IDLE: begin
                 state_read_count = 0;
             end
             STATE_ACTIVATED: begin
+                drive_val = 0;
+                rw_addr[24:10] = {ba, addr};
+                // $display("dram_addr during activate: %x", addr);
             end
             STATE_CMD_WRITE: begin
-                $display("writing %x to addr %x", dq, addr);
-                mem[addr[18:0]] = dq;
-                $display("reading %x from addr %x", mem[addr[18:0]], addr);
+                rw_addr[9:0] = addr[9:0];
+                // $display("writing %x to addr %x", dq, rw_addr);
+                // $display("dram_addr during write: %x", addr);
+                mem[rw_addr] = dq;
             end
             STATE_CMD_READ: begin
-                state_read_count += 1;
+                rw_addr[9:0] = addr[9:0];
 
-                if (state_read_count >= 2)
-                    dq_val = mem[addr[18:0] + state_read_count - 2];
-                drive_val = 1;
+                state_read_count += 1;
+                if (state_read_count >= 2) begin
+                    dq_val = mem[rw_addr + state_read_count - 2];
+                    drive_val = 1;
+                end
             end
         endcase
     end

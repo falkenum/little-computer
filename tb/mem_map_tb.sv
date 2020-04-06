@@ -6,16 +6,24 @@ module mem_map_tb;
     reg clk = 0;
     reg rst = 1;
 
+    // temp vars
+    reg [9:0] temp_x;
+    reg [8:0] temp_y;
+    reg [3:0] temp_color_comp;
 
     // tb inputs
     reg write_en = 0;
     reg [15:0] pc = 0;
     reg [15:0] data_addr = 0;
     reg [15:0] data_in = 0;
+    reg vga_en = 0;
+    reg [4:0] vga_x_group = 0;
+    reg [8:0] vga_y_val = 0;
 
     // tb outputs
     wire [15:0] instr;
     wire [15:0] data_out;
+    wire [31:0][11:0] vga_bgr_buf;
 
     // sdram ctl wires
     wire [15:0] dram_ctl_data_in;
@@ -25,6 +33,7 @@ module mem_map_tb;
     wire dram_data_ready;
     wire dram_refresh_data;
     wire dram_ctl_ready;
+    wire dram_ctl_burst_en;
 
 	wire		    [12:0]		dram_addr;
 	wire		     [1:0]		dram_ba;
@@ -51,6 +60,7 @@ module mem_map_tb;
         .write_en(dram_ctl_write_en),
         .addr(dram_ctl_addr),
         .data_in(dram_ctl_data_in),
+        .burst_en(dram_ctl_burst_en),
         .refresh_data(dram_refresh_data),
         // output
         .data_out(dram_ctl_data_out),
@@ -75,6 +85,7 @@ module mem_map_tb;
         .dram_addr(dram_ctl_addr),
         .dram_write_en(dram_ctl_write_en),
         .dram_refresh_data(dram_refresh_data),
+        .dram_burst_en(dram_ctl_burst_en),
         .dram_data_in(dram_ctl_data_in),
         .cpu_ready(1'b1),
 
@@ -83,14 +94,18 @@ module mem_map_tb;
         .pc(pc),
         .data_addr(data_addr),
         .write_en(write_en),
+        .vga_en(vga_en),
+        .vga_x_group(vga_x_group),
+        .vga_y_val(vga_y_val),
 
         // outputs
         .read_data(data_out),
-        .instr(instr)
+        .instr(instr),
+        .vga_bgr_buf(vga_bgr_buf)
     );
 
     initial begin
-        repeat(10000) begin
+        forever begin
             clk = 1; #10;
             clk = 0; #10;
         end
@@ -118,6 +133,7 @@ module mem_map_tb;
         $readmemh("as/add.mem", sdram_c.mem, 0, 5);
 
         `ASSERT_EQ(mem_map_c.dram_refresh_data, 0);
+        `ASSERT_EQ(mem_map_c.pc, 1);
         `ASSERT_EQ(sdram_ctl_c.refresh_data, 0);
         #SYS_CYCLE;
         `ASSERT_EQ(sdram_ctl_c.refresh_data, 1);
@@ -139,16 +155,22 @@ module mem_map_tb;
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ);
         `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
         #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+        `ASSERT_EQ(sdram_ctl_c.post_read_count, 1);
         `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
         #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+        `ASSERT_EQ(sdram_ctl_c.post_read_count, 2);
         `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
         #SYS_CYCLE;
-        `ASSERT_EQ(mem_map_c.dram_data_ready, 1);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_BURST_STOP);
         `ASSERT_EQ(mem_map_c.got_instr, 0);
         #SYS_CYCLE;
-        `ASSERT_EQ(mem_map_c.got_instr, 1);
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_INSTR_OUT);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
+        `ASSERT_EQ(sdram_ctl_c.data_ready, 1);
+        `ASSERT_EQ(mem_map_c.dram_data_ready, 1);
+        `ASSERT_EQ(mem_map_c.got_instr, 1);
         #SYS_CYCLE;
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_RW_DATA);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
@@ -225,7 +247,6 @@ module mem_map_tb;
 
         #CPU_CYCLE;
         `ASSERT_EQ(instr, 'hE000);
-        `ASSERT_EQ(data_out, 'hABAB);
         pc = 0;
         write_en = 0;
         data_in = 'hABAB;
@@ -238,8 +259,43 @@ module mem_map_tb;
         data_addr = 7;
         data_in = 'hcdcd;
         #CPU_CYCLE;
-        `ASSERT_EQ(data_out, 'hcdcd);
         `ASSERT_EQ(instr, 'h4809);
 
+        // vga write addr
+        data_addr = 'hF80C;
+
+        // x
+        pc = 0;
+        data_in = 1;
+        #CPU_CYCLE;
+
+        // y
+        pc = 1;
+        data_in = 2;
+        #CPU_CYCLE;
+
+        // bgr
+        pc = 2;
+        data_in = 'h0888;
+        #CPU_CYCLE;
+        `ASSERT_EQ(sdram_c.mem[{6'h1, 10'h1, 9'h2}], 'h0888);
+
+        temp_x = 32;
+        temp_y = 7;
+        temp_color_comp = 0;
+
+        // filling some values into video memory
+        while (temp_x < 64) begin
+            sdram_c.mem[{6'h1, temp_x, temp_y}] = {4'b0, {3{temp_color_comp}}};
+            temp_x += 1;
+            temp_color_comp += 1;
+        end
+
+        pc = 0;
+        vga_en = 1;
+        vga_x_group = 1;
+        vga_y_val = 7;
+
+        $finish;
     end
 endmodule
