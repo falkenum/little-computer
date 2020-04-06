@@ -3,7 +3,7 @@ This project is an implementation of a 16-bit single cycle CPU along with driver
 
 # The ISA
 Instruction | 4-bit opcode | Info
----
+--- | --- | ---
 add | 0x0 | add 
 lsl | 0x1 | shift left
 and | 0x2 | and
