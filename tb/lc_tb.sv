@@ -183,7 +183,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.sdram_ctl_c.refresh_data, 1);
         `ASSERT_EQ(lc_c.mem_map_c.dram_refresh_data, 1);
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
-        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_FETCH_DATA);
+        `ASSERT_EQ(lc_c.mem_map_c.state, lc_c.mem_map_c.STATE_RW_DATA);
 
         `ASSERT_EQ(lc_c.mem_map_c.dram_write_en, 1);
         `ASSERT_EQ(lc_c.mem_map_c.dram_addr, 31);

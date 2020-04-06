@@ -24,7 +24,6 @@ module sdram_sim(
 
     wire [2:0] cmd = {ras_n, cas_n, we_n};
     reg [1:0] state = STATE_IDLE;
-    // 256 words of 16 bits each
     reg [15:0] mem [1 << 8];
     reg precharged = 0, drive_val = 0;
     reg [15:0] dq_val;
@@ -42,13 +41,9 @@ module sdram_sim(
                 else if (cmd == CMD_READ) next_state_func = STATE_CMD_READ;
                 else next_state_func = state;
             STATE_CMD_WRITE:
-                if (cmd == CMD_READ) next_state_func = STATE_CMD_READ;
-                else next_state_func = state;
+                next_state_func = STATE_IDLE;
             STATE_CMD_READ: begin
-                if (precharged) begin
-                    next_state_func = STATE_IDLE;
-                end
-                else next_state_func = state;
+                next_state_func = STATE_IDLE;
             end
             default: next_state_func = STATE_IDLE;
         endcase
@@ -58,16 +53,16 @@ module sdram_sim(
         state = next_state_func(state);
         case(state)
             STATE_IDLE: begin
-                precharged = 0;
+                // precharged = 0;
             end
             STATE_ACTIVATED: begin
+                drive_val = 0;
             end
             STATE_CMD_WRITE: begin
-                drive_val = 0;
                 mem[addr[7:0]] = dq;
             end
             STATE_CMD_READ: begin
-                if (addr[10]) precharged = 1;
+                // if (addr[10]) precharged = 1;
                 // $display("clocked precharged: %b", precharged);
                 dq_val = mem[addr[7:0]];
                 drive_val = 1;

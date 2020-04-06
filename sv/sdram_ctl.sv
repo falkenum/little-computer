@@ -38,10 +38,8 @@ module sdram_ctl(
 	localparam STATE_IDLE = 4;
 	localparam STATE_ACTIVATE = 5;
 	localparam STATE_WRITE = 6;
-	localparam STATE_POST_WRITE_NOP = 7;
-	localparam STATE_READ = 8;
-	localparam STATE_POST_READ_NOP = 9;
-	localparam STATE_READ_COMPLETE = 10;
+	localparam STATE_READ = 7;
+	localparam STATE_POST_READ_NOP = 8;
 
     localparam CMD_NOP = 3'b111;
     localparam CMD_PRE = 3'b010;
@@ -58,13 +56,14 @@ module sdram_ctl(
     assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
     assign dram_dq = drive_val ? dq_val : 16'bZ;
 
+    wire drive_val = state == STATE_WRITE;
 
 	reg [31:0] wait_count;
     reg [STATE_WIDTH-1:0] state;
     reg [2:0] cmd;
     reg [15:0] data_in_r, dq_val;
     reg [24:0] addr_r;
-    reg write_en_r, drive_val;
+    reg write_en_r;
 
     function [STATE_WIDTH-1:0] next_state_func;
         input [STATE_WIDTH-1:0] state;
@@ -92,22 +91,15 @@ module sdram_ctl(
                 if (write_en_r) next_state_func = STATE_WRITE;
                 else next_state_func = STATE_READ;
             STATE_WRITE: begin
-                next_state_func = STATE_POST_WRITE_NOP;
+                next_state_func = STATE_IDLE;
             end
-            STATE_POST_WRITE_NOP:
-                // wait for data to propagate, not sure how many cycles this actually needs to be
-                // 5 seems to work
-                if (wait_count == 5) next_state_func = STATE_READ;
-                else next_state_func = state;
             STATE_READ: begin
                 next_state_func = STATE_POST_READ_NOP;
             end
             STATE_POST_READ_NOP:
                 // CAS latency is 2
-                if (wait_count == 2) next_state_func = STATE_READ_COMPLETE;
+                if (wait_count == 2) next_state_func = STATE_IDLE;
                 else next_state_func = state;
-            STATE_READ_COMPLETE:
-                next_state_func = STATE_IDLE;
             default: next_state_func = STATE_RST_NOP;
         endcase
         
@@ -116,7 +108,6 @@ module sdram_ctl(
     always @(posedge clk) begin
 		if (~rst) begin
 			wait_count = 0;
-            drive_val = 0;
             state = STATE_RST_NOP;
             dq_val = 16'bZ;
             data_out = 0;
@@ -151,7 +142,10 @@ module sdram_ctl(
                 wait_count = 0;
             end
             STATE_IDLE: begin
+                cmd = CMD_NOP;
                 mem_ready = 1;
+                data_ready = 1;
+                data_out = dram_dq;
             end
             STATE_ACTIVATE: begin
                 write_en_r = write_en;
@@ -166,25 +160,14 @@ module sdram_ctl(
                 cmd = CMD_WRITE;
                 dq_val = data_in_r;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
-                wait_count = 0;
-                drive_val = 1;
-            end
-            STATE_POST_WRITE_NOP: begin
-                cmd = CMD_NOP;
             end
             STATE_READ: begin
                 cmd = CMD_READ;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
                 wait_count = 0;
-                drive_val = 0;
             end
             STATE_POST_READ_NOP: begin
                 cmd = CMD_NOP;
-            end
-            STATE_READ_COMPLETE: begin
-                cmd = CMD_NOP;
-                data_out = dram_dq;
-                data_ready = 1;
             end
         endcase
     

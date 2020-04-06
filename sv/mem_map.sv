@@ -32,7 +32,7 @@ module mem_map(
     localparam STATE_FETCH_INSTR = 1;
     localparam STATE_WAIT = 2;
     localparam STATE_INSTR_OUT = 3;
-    localparam STATE_FETCH_DATA = 4;
+    localparam STATE_RW_DATA = 4;
     localparam STATE_DATA_OUT = 5;
 
     reg [2:0] state;
@@ -41,7 +41,7 @@ module mem_map(
     reg got_instr;
     reg [1:0] uart_tx_ready_vals;
 
-    assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_FETCH_DATA;
+    assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_RW_DATA;
 
     function [2:0] next_state_func;
         input [2:0] state;
@@ -56,8 +56,8 @@ module mem_map(
                 else if (dram_data_ready && got_instr) next_state_func = STATE_DATA_OUT;
                 else next_state_func = state;
             STATE_INSTR_OUT:
-                next_state_func = STATE_FETCH_DATA;
-            STATE_FETCH_DATA:
+                next_state_func = STATE_RW_DATA;
+            STATE_RW_DATA:
                 next_state_func = STATE_WAIT;
             STATE_DATA_OUT:
                 next_state_func = STATE_IDLE;
@@ -108,7 +108,7 @@ module mem_map(
                 instr = dram_read_data;
                 got_instr = 1;
             end
-            STATE_FETCH_DATA: begin
+            STATE_RW_DATA: begin
                 dram_data_in = data_in;
                 if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
                     dram_addr = {9'b0, data_addr}; 
