@@ -1,9 +1,9 @@
 
 module little_computer(
     //////////// clock //////////
-	input 		          		ADC_CLK_10,
+	// input 		          		ADC_CLK_10,
 	input 		          		MAX10_CLK1_50,
-	input 		          		MAX10_CLK2_50,
+	// input 		          		MAX10_CLK2_50,
 
 	//////////// SDRAM //////////
 	output		    [12:0]		DRAM_ADDR,
@@ -43,15 +43,15 @@ module little_computer(
 	output		          		VGA_VS,
 
 	//////////// Accelerometer //////////
-	output		          		GSENSOR_CS_N,
-	input 		     [2:1]		GSENSOR_INT,
-	output		          		GSENSOR_SCLK,
-	inout 		          		GSENSOR_SDI,
-	output 		          		GSENSOR_SDO,
+	// output		          		GSENSOR_CS_N,
+	// input 		     [2:1]		GSENSOR_INT,
+	// output		          		GSENSOR_SCLK,
+	// inout 		          		GSENSOR_SDI,
+	// output 		          		GSENSOR_SDO,
 
 	//////////// Arduino //////////
-	inout 		    [15:0]		ARDUINO_IO,
-	inout 		          		ARDUINO_RESET_N,
+	// inout 		    [15:0]		ARDUINO_IO,
+	// inout 		          		ARDUINO_RESET_N,
 
 	//////////// GPIO, GPIO connect to GPIO Default //////////
 	inout 		    [35:0]		GPIO
@@ -85,6 +85,12 @@ module little_computer(
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_rx_byte, uart_tx_byte;
     wire [24:0] mem_map_dram_addr;
+    wire vga_mem_fetch_en;
+    wire [4:0] vga_x_group;
+    wire [8:0] vga_y_val;
+    wire [31:0][11:0] vga_bgr_buf;
+    wire [31:0][15:0] dram_ctl_burst_buf;
+
     vga vga_c(
         .clk(sysclk),           // base clock
         .rst(sysrst),           // reset: restarts frame
@@ -92,8 +98,12 @@ module little_computer(
         .vs(VGA_VS),           // vertical sync
         .rval(VGA_R),
         .gval(VGA_G),
-        .bval(VGA_B)
+        .bval(VGA_B),
         // .vblank()     // high during blanking interval
+        .mem_fetch_en(vga_mem_fetch_en),
+        .mem_fetch_x_group(vga_x_group),
+        .mem_fetch_y_val(vga_y_val),
+        .mem_bgr_buf(vga_bgr_buf)
     );
 
     sdram_ctl sdram_ctl_c(
@@ -117,6 +127,7 @@ module little_computer(
         .data_in(load_en ? uart_word : mem_map_to_dram_data),
         .burst_en(mem_map_dram_burst_en),
 
+        .burst_buf(dram_ctl_burst_buf),
         .data_out(dram_data),
         .data_ready(dram_to_mem_map_data_ready),
         .mem_ready(dram_ready)
@@ -166,7 +177,11 @@ module little_computer(
         .clk(sysclk),
         .rst(sysrst),
         .uart_tx_ready(uart_tx_ready),
-
+        .vga_en(vga_mem_fetch_en),
+        .vga_x_group(vga_x_group),
+        .vga_y_val(vga_y_val),
+        .vga_bgr_buf(vga_bgr_buf),
+        .dram_burst_buf(dram_ctl_burst_buf),
 
         .dram_data_ready(dram_to_mem_map_data_ready),
         .cpu_ready(cpu_ready),

@@ -2,12 +2,18 @@
 module vga(
     input clk,           // base clock
     input rst,           // reset: restarts frame
+    input [31:0][11:0] mem_bgr_buf,
     output reg hs,           // horizontal sync
     output reg vs,           // vertical sync
     output [3:0] rval,
     output [3:0] gval,
     output [3:0] bval,
-    output vblank     // high during blanking interval
+    output vblank,     // high during blanking interval
+    output mem_fetch_en,
+    output [4:0] mem_fetch_x_group,
+    output [8:0] mem_fetch_y_val
+
+
 );
 
     // VGA timings https://timetoexplore.net/blog/video-timings-vga-720p-1080p
@@ -25,6 +31,11 @@ module vga(
     reg clk_25M;
     reg [1:0] clk_25M_vals;
     wire active = ~((h_count < HA_START) | (v_count > VA_END - 1)); 
+
+    // TODO 
+    assign mem_fetch_en = 1'b0;
+    assign mem_fetch_x_group = 0;
+    assign mem_fetch_y_val = 0;
 
     assign rval = active ? 4'h8 : 4'b0;
     assign gval = active ? 4'h8 : 4'b0;

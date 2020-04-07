@@ -23,7 +23,8 @@ module sdram_ctl(
     input refresh_data,
     output reg [15:0] data_out,
     output reg data_ready,
-    output reg mem_ready
+    output reg mem_ready,
+    output reg [31:0][15:0] burst_buf
 );
 
 	// wait for 100 us, 5000 * 20 ns period
@@ -170,10 +171,8 @@ module sdram_ctl(
             STATE_WRITE: begin
                 cmd = CMD_WRITE;
                 dq_val = data_in_r;
-                // $display("writing val %x to addr %x", dq_val, addr);
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
                 drive_val = 1;
-                // $display("dram_addr during write: %x", dram_addr);
             end
             STATE_READ: begin
                 cmd = CMD_READ;
@@ -184,11 +183,15 @@ module sdram_ctl(
                 cmd = CMD_NOP;
                 post_read_count += 1;
                 if (post_read_count >= 2) begin
-                    data_out = dram_dq;
+                    if (~burst_en) data_out = dram_dq;
+                    else burst_buf[post_read_count - 2] = dram_dq;
                 end
+
             end
-            STATE_BURST_STOP:
+            STATE_BURST_STOP: begin
                 cmd = CMD_BST;
+            end
+
         endcase
     
 

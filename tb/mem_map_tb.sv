@@ -34,6 +34,7 @@ module mem_map_tb;
     wire dram_refresh_data;
     wire dram_ctl_ready;
     wire dram_ctl_burst_en;
+    wire [31:0][15:0] dram_ctl_burst_buf;
 
 	wire		    [12:0]		dram_addr;
 	wire		     [1:0]		dram_ba;
@@ -66,6 +67,7 @@ module mem_map_tb;
         .data_out(dram_ctl_data_out),
         .data_ready(dram_data_ready),
         .mem_ready(dram_ctl_ready),
+        .burst_buf(dram_ctl_burst_buf),
 
         .dram_addr(dram_addr),
         .dram_ba(dram_ba),
@@ -87,7 +89,9 @@ module mem_map_tb;
         .dram_refresh_data(dram_refresh_data),
         .dram_burst_en(dram_ctl_burst_en),
         .dram_data_in(dram_ctl_data_in),
+        .dram_burst_buf(dram_ctl_burst_buf),
         .cpu_ready(1'b1),
+        .uart_tx_ready(1'b0),
 
         //inputs
         .data_in(data_in),
@@ -147,7 +151,6 @@ module mem_map_tb;
         #SYS_CYCLE;
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
-        // $display(sdram_ctl_c.state);
         `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
 
         `ASSERT_EQ(mem_map_c.got_instr, 0);
@@ -264,37 +267,48 @@ module mem_map_tb;
         // vga write addr
         data_addr = 'hF80C;
 
-        // x
-        pc = 0;
-        data_in = 1;
-        #CPU_CYCLE;
-
-        // y
-        pc = 1;
-        data_in = 2;
-        #CPU_CYCLE;
-
-        // bgr
-        pc = 2;
-        data_in = 'h0888;
-        #CPU_CYCLE;
-        `ASSERT_EQ(sdram_c.mem[{6'h1, 10'h1, 9'h2}], 'h0888);
-
         temp_x = 32;
         temp_y = 7;
         temp_color_comp = 0;
 
         // filling some values into video memory
         while (temp_x < 64) begin
-            sdram_c.mem[{6'h1, temp_x, temp_y}] = {4'b0, {3{temp_color_comp}}};
+            // x
+            pc = 0;
+            data_in = temp_x;
+            #CPU_CYCLE;
+
+            // y
+            pc = 1;
+            data_in = temp_y;
+            #CPU_CYCLE;
+
+            // bgr
+            pc = 2;
+            data_in = {4'b0, {3{temp_color_comp}}};
+            #CPU_CYCLE;
             temp_x += 1;
             temp_color_comp += 1;
         end
+
+        `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd32}], 12'h000);
+        `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd33}], 12'h111);
 
         pc = 0;
         vga_en = 1;
         vga_x_group = 1;
         vga_y_val = 7;
+        #SYS_CYCLE;
+        while (mem_map_c.state !== mem_map_c.STATE_IDLE)
+            #SYS_CYCLE;
+
+        temp_x = 0;
+        temp_color_comp = 0;
+        while (temp_x < 32) begin
+            `ASSERT_EQ(vga_bgr_buf[temp_x], {3{temp_color_comp}});
+            temp_x += 1;
+            temp_color_comp += 1;
+        end
 
         $finish;
     end

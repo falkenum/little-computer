@@ -5,6 +5,7 @@ module mem_map(
     input [`WORD_WIDTH-1:0] data_addr,
     input [`WORD_WIDTH-1:0] data_in,
     input [`WORD_WIDTH-1:0] dram_read_data,
+    input [31:0][15:0] dram_burst_buf,
     input uart_tx_ready,
     input dram_data_ready,
     input cpu_ready,
@@ -15,6 +16,7 @@ module mem_map(
     input clk,
     input rst,
     output dram_refresh_data,
+    output [31:0][11:0] vga_bgr_buf,
     output reg [24:0] dram_addr,
     output reg dram_write_en,
     output reg dram_burst_en,
@@ -23,8 +25,7 @@ module mem_map(
     output reg [15:0] instr,
     output reg [9:0] led,
     output reg [7:0] uart_tx_byte,
-    output reg uart_tx_start_n,
-    output reg [31:0][11:0] vga_bgr_buf
+    output reg uart_tx_start_n
 
 );
     localparam DRAM_FIRST = 16'h0;
@@ -48,17 +49,25 @@ module mem_map(
     localparam STATE_INSTR_OUT = 3;
     localparam STATE_RW_DATA = 4;
     localparam STATE_DATA_OUT = 5;
+    localparam STATE_FETCH_VGA = 6;
 
     reg [2:0] state;
-    reg [3:0] wait_count;
+    reg [5:0] wait_count;
     reg [`WORD_WIDTH-1:0] last_pc;
-    reg got_instr;
+    reg got_instr, got_data;
     reg [1:0] uart_tx_ready_vals;
     reg [1:0] vga_write_state;
-    reg [9:0] vga_x;
-    reg [8:0] vga_y;
+    reg [9:0] vga_x_in;
+    reg [8:0] vga_y_in;
 
-    assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_RW_DATA;
+    genvar i;
+    generate
+        for (i=0; i < 32; i = i + 1) begin
+            assign vga_bgr_buf[i] = dram_burst_buf[i][11:0];
+        end
+    endgenerate
+
+    assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_RW_DATA || state == STATE_FETCH_VGA;
 
     function [2:0] next_state_func;
         input [2:0] state;
@@ -70,14 +79,19 @@ module mem_map(
                 next_state_func = STATE_WAIT;
             STATE_WAIT:
                 if (dram_data_ready && !got_instr) next_state_func = STATE_INSTR_OUT;
-                else if (dram_data_ready && got_instr) next_state_func = STATE_DATA_OUT;
+                else if (dram_data_ready && !got_data) next_state_func = STATE_DATA_OUT;
+                else if (dram_data_ready && got_instr && got_data) next_state_func = STATE_IDLE;
                 else next_state_func = state;
             STATE_INSTR_OUT:
                 next_state_func = STATE_RW_DATA;
             STATE_RW_DATA:
                 next_state_func = STATE_WAIT;
             STATE_DATA_OUT:
-                next_state_func = STATE_IDLE;
+                if (vga_en) next_state_func = STATE_FETCH_VGA;
+                else next_state_func = STATE_IDLE;
+            STATE_FETCH_VGA:
+                next_state_func = STATE_WAIT;
+
             default: next_state_func = STATE_IDLE;
         endcase
     endfunction
@@ -96,6 +110,7 @@ module mem_map(
             last_pc = 0;
             wait_count = 0;
             got_instr = 0;
+            got_data = 0;
             uart_tx_start_n = 1;
             uart_tx_ready_vals = 2'b11;
             vga_write_state = VGA_WRITE_STATE_X;
@@ -111,6 +126,7 @@ module mem_map(
                 last_pc = ~cpu_ready ? 'hffff : pc;
             end 
             STATE_FETCH_INSTR: begin
+                dram_burst_en = 0;
                 dram_write_en = 1'b0;
                 if (pc >= DRAM_FIRST && pc <= DRAM_LAST) begin
                     dram_addr = {9'b0, pc}; 
@@ -119,6 +135,7 @@ module mem_map(
                 end
                 wait_count = 0;
                 got_instr = 0;
+                got_data = 0;
             end
             STATE_WAIT: begin
                 wait_count += 1;
@@ -152,16 +169,16 @@ module mem_map(
                 if (write_en && data_addr == VGA_WRITE) begin
                     case(vga_write_state)
                         VGA_WRITE_STATE_X: begin
-                            vga_x = data_in[9:0];
+                            vga_x_in = data_in[9:0];
                             vga_write_state = VGA_WRITE_STATE_Y;
                         end
                         VGA_WRITE_STATE_Y: begin
-                            vga_y = data_in[8:0];
+                            vga_y_in = data_in[8:0];
                             vga_write_state = VGA_WRITE_STATE_BGR;
                         end
                         VGA_WRITE_STATE_BGR: begin
                             // pixels start at address 'h80000
-                            dram_addr = {6'b1, vga_x, vga_y};
+                            dram_addr = {6'b1, vga_y_in, vga_x_in};
                             dram_write_en = 1'b1;
                             dram_data_in = data_in;
                             vga_write_state = VGA_WRITE_STATE_X;
@@ -173,6 +190,7 @@ module mem_map(
                 wait_count = 0;
             end
             STATE_DATA_OUT: begin
+                got_data = 1;
                 if (data_addr == UART_TX_READY) begin   
                     read_data = uart_tx_ready ? 16'b1 : 16'b0;
                 end
@@ -181,7 +199,12 @@ module mem_map(
                 end
 
             end
+            STATE_FETCH_VGA: begin
+                dram_burst_en = 1;
+                dram_write_en = 0;
+                dram_addr = {6'b1, vga_y_val, vga_x_group, 5'b0};
+                wait_count = 0;
+            end
         endcase
-
     end
 endmodule
