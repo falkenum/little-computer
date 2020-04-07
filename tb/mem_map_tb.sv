@@ -10,6 +10,7 @@ module mem_map_tb;
     reg [9:0] temp_x;
     reg [8:0] temp_y;
     reg [3:0] temp_color_comp;
+    integer cycle_count = 0;
 
     // tb inputs
     reg write_en = 0;
@@ -296,11 +297,15 @@ module mem_map_tb;
 
         pc = 0;
         vga_en = 1;
+        write_en = 0;
         vga_x_group = 1;
         vga_y_val = 7;
         #SYS_CYCLE;
-        while (mem_map_c.state !== mem_map_c.STATE_IDLE)
+        
+        while (mem_map_c.state !== mem_map_c.STATE_IDLE) begin
+            cycle_count += 1;
             #SYS_CYCLE;
+        end
 
         temp_x = 0;
         temp_color_comp = 0;

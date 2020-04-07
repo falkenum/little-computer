@@ -62,7 +62,7 @@ module mem_map(
 
     genvar i;
     generate
-        for (i=0; i < 32; i = i + 1) begin
+        for (i=0; i < 32; i = i + 1) begin : for_buf
             assign vga_bgr_buf[i] = dram_burst_buf[i][11:0];
         end
     endgenerate
@@ -73,6 +73,8 @@ module mem_map(
         input [2:0] state;
         case(state)
             STATE_IDLE:
+                // TODO use some condition other than the pc changing
+                // might be a problem if I ever implement interrupts and use an infinite loop
                 if (cpu_ready && pc != last_pc) next_state_func = STATE_FETCH_INSTR;
                 else next_state_func = state;
             STATE_FETCH_INSTR:

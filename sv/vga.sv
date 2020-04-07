@@ -5,15 +5,13 @@ module vga(
     input [31:0][11:0] mem_bgr_buf,
     output reg hs,           // horizontal sync
     output reg vs,           // vertical sync
-    output [3:0] rval,
-    output [3:0] gval,
-    output [3:0] bval,
-    output vblank,     // high during blanking interval
+    output reg [3:0] rval,
+    output reg [3:0] gval,
+    output reg [3:0] bval,
+    output vblank,
     output mem_fetch_en,
     output [4:0] mem_fetch_x_group,
     output [8:0] mem_fetch_y_val
-
-
 );
 
     // VGA timings https://timetoexplore.net/blog/video-timings-vga-720p-1080p
@@ -29,17 +27,21 @@ module vga(
     reg [9:0] h_count;  // line position
     reg [9:0] v_count;  // screen position
     reg clk_25M;
-    reg [1:0] clk_25M_vals;
+    reg [5:0] clk_800k_count;
+    reg [1:0] clk_800k_vals;
+    reg [31:0][11:0] mem_bgr_buf_r;
+
     wire active = ~((h_count < HA_START) | (v_count > VA_END - 1)); 
+    wire clk_800k = ~clk_800k_count[5];
 
-    // TODO 
-    assign mem_fetch_en = 1'b0;
-    assign mem_fetch_x_group = 0;
-    assign mem_fetch_y_val = 0;
+    assign mem_fetch_en = v_count < VA_END ? h_count >= 128 : 0;
+    assign mem_fetch_x_group = (h_count - 128) >> 5;
+    assign mem_fetch_y_val = v_count[8:0];
 
-    assign rval = active ? 4'h8 : 4'b0;
-    assign gval = active ? 4'h8 : 4'b0;
-    assign bval = active ? 4'h8 : 4'b0;
+
+    // assign rval = active ? mem_bgr_buf_r[h_count % 32][3:0] : 4'b0;
+    // assign gval = active ? mem_bgr_buf_r[h_count % 32][7:4] : 4'b0;
+    // assign bval = active ? mem_bgr_buf_r[h_count % 32][11:8] : 4'b0;
 
     // keep x and y bound within the active pixels
     // assign x = (h_count < HA_START) ? 0 : (h_count - HA_START);
@@ -57,15 +59,23 @@ module vga(
     // assign o_animate = ((v_count == VA_END - 1) & (h_count == LINE));
 
     always @ (posedge clk) begin
-        clk_25M = ~clk_25M;    
-        clk_25M_vals = {clk_25M_vals[0], clk_25M};
         if (~rst)  // reset to start of frame
         begin
             h_count = 0;
             v_count = 0;
             clk_25M = 0;
+            clk_800k_count = 0;
+            clk_800k_vals = 2'b11;
         end
-        if (clk_25M_vals == 2'b01)  // posedge of clk_25M
+        clk_800k_count += 1;
+        clk_800k_vals = {clk_800k_vals[0], clk_800k};
+        clk_25M = ~clk_25M;    
+
+        if (clk_800k_vals == 2'b01) begin
+            mem_bgr_buf_r = mem_bgr_buf;
+        end
+        
+        if (clk_25M)
         begin
             if (h_count == TICKS_PER_LINE)  // end of line
             begin

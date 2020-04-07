@@ -52,13 +52,6 @@ module sdram_ctl(
     localparam CMD_WRITE = 3'b100;
     localparam CMD_BST = 3'b110;
 
-    assign dram_cke = 1;
-    assign dram_clk = clk;
-    assign {dram_udqm, dram_ldqm} = 2'b0;
-    assign dram_cs_n = 0;
-    assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
-    assign dram_dq = drive_val ? dq_val : 16'bZ;
-
 	reg [31:0] wait_count;
     reg [STATE_WIDTH-1:0] state;
     reg [2:0] cmd;
@@ -67,6 +60,13 @@ module sdram_ctl(
     reg write_en_r;
     reg [5:0] post_read_count;
     reg drive_val;
+
+    assign dram_cke = 1;
+    assign dram_clk = clk;
+    assign {dram_udqm, dram_ldqm} = 2'b0;
+    assign dram_cs_n = 0;
+    assign {dram_ras_n, dram_cas_n, dram_we_n} = cmd;
+    assign dram_dq = drive_val ? dq_val : 16'bZ;
 
     function [STATE_WIDTH-1:0] next_state_func;
         input [STATE_WIDTH-1:0] state;
