@@ -1,6 +1,7 @@
 
 module vga(
     input clk,           // base clock
+    input clk_800k,           
     input rst,           // reset: restarts frame
     input [31:0][11:0] mem_bgr_buf,
     output reg hs,           // horizontal sync
@@ -27,12 +28,10 @@ module vga(
     reg [9:0] h_count;  // line position
     reg [9:0] v_count;  // screen position
     reg clk_25M;
-    reg [5:0] clk_800k_count;
     reg [1:0] clk_800k_vals;
     reg [31:0][11:0] mem_bgr_buf_r;
 
     wire active = ~((h_count < HA_START) | (v_count > VA_END - 1)); 
-    wire clk_800k = ~clk_800k_count[5];
 
     assign mem_fetch_en = v_count < VA_END ? h_count >= 128 : 0;
     assign mem_fetch_x_group = (h_count - 128) >> 5;
@@ -64,10 +63,8 @@ module vga(
             h_count = 0;
             v_count = 0;
             clk_25M = 0;
-            clk_800k_count = 0;
             clk_800k_vals = 2'b11;
         end
-        clk_800k_count += 1;
         clk_800k_vals = {clk_800k_vals[0], clk_800k};
         clk_25M = ~clk_25M;    
 

@@ -102,7 +102,7 @@ module sdram_ctl(
             STATE_POST_READ: begin
                 // CAS latency is 2, 
                 if ((~burst_en && post_read_count == 2) ||
-                 (burst_en && post_read_count == 34)) next_state_func = STATE_BURST_STOP;
+                 (burst_en && post_read_count == 33)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
                 // $display("burst en: %b, read count: %d", burst_en, post_read_count);
             end
@@ -183,8 +183,13 @@ module sdram_ctl(
                 cmd = CMD_NOP;
                 post_read_count += 1;
                 if (post_read_count >= 2) begin
+
                     if (~burst_en) data_out = dram_dq;
-                    else burst_buf[post_read_count - 2] = dram_dq;
+                    else begin
+                        burst_buf[post_read_count - 2] = dram_dq;
+                        // $display("wrote data %x to index %d of buf", dram_dq, post_read_count - 2);
+                        // $display("reading: %x", burst_buf[post_read_count - 2]);
+                    end
                 end
 
             end

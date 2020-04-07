@@ -2,6 +2,7 @@
 
 module cpu(
     input clk,
+    input clk_800k,
     input rst,
     input [`WORD_WIDTH-1:0] instr,
     input [`WORD_WIDTH-1:0] data_in,
@@ -13,18 +14,16 @@ module cpu(
     output mem_write_en
 );
 
+    assign data_addr = op == `OP_PUSH ? sp :
+                       (op == `OP_POP ? sp + 1 : alu_out);
+    assign data_out = rd_val;
+    assign mem_write_en = is_sw | op == `OP_PUSH;
+
     reg [`WORD_WIDTH-1:0] lr, sp;
     reg [`WORD_WIDTH-1:0] reg_file [`NUM_REGS];
-    reg [`CPU_CLK_DIV_WIDTH-1:0] clk_800k_count;
     reg [1:0] cpu_clk_vals;
 
-    wire [`OP_WIDTH-1:0] op = instr[`WORD_WIDTH-1:`WORD_WIDTH-`OP_WIDTH];
-    wire [`NUM_REGS_WIDTH-1:0] rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
-    wire [`NUM_REGS_WIDTH-1:0] rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
-    wire [`NUM_REGS_WIDTH-1:0] rd = instr[`NUM_REGS_WIDTH-1:0];
-    wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
-
-    wire cpu_clk = debug_mode ? debug_clk : ~clk_800k_count[5];
+    wire cpu_clk = debug_mode ? debug_clk : clk_800k;
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J | op == `OP_JL;
@@ -36,20 +35,22 @@ module cpu(
     wire reg_write_en = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b00 | op == `OP_ADDI | op == `OP_LW | op == `OP_POP;
     wire beq_taken = is_beq & (rt_val == rd_val);
 
+    wire [`OP_WIDTH-1:0] op = instr[`WORD_WIDTH-1:`WORD_WIDTH-`OP_WIDTH];
     wire [`ALU_OP_WIDTH-1:0] alu_op = (is_lw | is_sw) ? `ALU_OP_ADD : op[`OP_WIDTH-3:`OP_WIDTH-4];
+
+    wire [`NUM_REGS_WIDTH-1:0] rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
+    wire [`NUM_REGS_WIDTH-1:0] rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
+    wire [`NUM_REGS_WIDTH-1:0] rd = instr[`NUM_REGS_WIDTH-1:0];
+
     wire [`IMM_WIDTH-1:0] imm = instr[(`WORD_WIDTH-`OP_WIDTH-1):2*`NUM_REGS_WIDTH];
     wire [`JIMM_WIDTH-1:0] jimm = instr[`JIMM_WIDTH-1:0];
 
-    wire [`WORD_WIDTH-1:0] alu_out;
     wire [`WORD_WIDTH-1:0] imm_extended = {imm[`IMM_WIDTH-1] ? ~10'b0 : 10'b0, imm};
     wire [`WORD_WIDTH-1:0] jimm_extended = {jimm[`JIMM_WIDTH-1] ? ~4'b0 : 4'b0, jimm};
     wire [`WORD_WIDTH-1:0] reg_in = use_data_in ? data_in : alu_out;
 
-
-    assign data_addr = op == `OP_PUSH ? sp :
-                       (op == `OP_POP ? sp + 1 : alu_out);
-    assign data_out = rd_val;
-    assign mem_write_en = is_sw | op == `OP_PUSH;
+    wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
+    wire [`WORD_WIDTH-1:0] alu_out;
 
     alu alu_c(
         .op(alu_op), 
@@ -61,13 +62,11 @@ module cpu(
     localparam STACK_BEGIN = 16'hF7FF;
 
     always @(posedge clk) begin
-        clk_800k_count += 1;
         cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
             pc = 0;
             sp = STACK_BEGIN;
-            clk_800k_count = 0;
-            cpu_clk_vals = 2'b00;
+            cpu_clk_vals = 2'b11;
             reg_file[0] = 0;
         end
 

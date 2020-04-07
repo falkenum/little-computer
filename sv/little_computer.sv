@@ -61,6 +61,7 @@ module little_computer(
     localparam STATE_RUNNING = 1;
 
     // assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_tx, uart_rx};
+    assign GPIO[9] = uart_tx;
 
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
@@ -68,7 +69,9 @@ module little_computer(
     reg [1:0] key1_vals;
     reg [1:0] state;
     reg internal_cpu_rst;
+    reg [5:0] clk_800k_count;
 
+    wire clk_800k = ~clk_800k_count[5];
     wire sysclk = MAX10_CLK1_50;
     wire uart_rx = GPIO[8];
     wire sysrst = KEY[0];
@@ -91,17 +94,16 @@ module little_computer(
     wire [31:0][11:0] vga_bgr_buf;
     wire [31:0][15:0] dram_ctl_burst_buf;
 
-    assign GPIO[9] = uart_tx;
-
     vga vga_c(
         .clk(sysclk),           // base clock
         .rst(sysrst),           // reset: restarts frame
+        .clk_800k(clk_800k),
         .hs(VGA_HS),           // horizontal sync
         .vs(VGA_VS),           // vertical sync
         .rval(VGA_R),
         .gval(VGA_G),
         .bval(VGA_B),
-        .vblank(),     // high during blanking interval
+        // .vblank()     // high during blanking interval
         .mem_fetch_en(vga_mem_fetch_en),
         .mem_fetch_x_group(vga_x_group),
         .mem_fetch_y_val(vga_y_val),
@@ -201,6 +203,7 @@ module little_computer(
 
     cpu cpu_c(
         .clk(sysclk),
+        .clk_800k(clk_800k),
         .rst(cpu_rst),
         .instr(instr),
         .data_in(mem_map_lw_data),
@@ -228,6 +231,7 @@ module little_computer(
 
     always @(posedge sysclk) begin
         if (~sysrst) begin
+            clk_800k_count = 0;
             uart_word_count = 0;
             uart_word_ready_vals = 2'b00;
             state = STATE_RESET;
@@ -236,6 +240,7 @@ module little_computer(
             internal_cpu_rst = 0;
         end
         else state = next_state_func(state);
+        clk_800k_count += 1;
 
         case(state)
             STATE_RESET: begin

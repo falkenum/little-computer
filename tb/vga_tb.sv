@@ -60,26 +60,90 @@ module vga_tb;
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
 
-        load_instr("as/vga.mem", 14);
-        while (lc_c.cpu_c.halted === 0) #CPU_CYCLE;
-
-        // $display("beginning test");
+        load_instr("as/vga.mem", 25);
+        while (lc_c.cpu_c.pc != 5) #CPU_CYCLE;
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'hF80C);
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h0280);
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 'h01E0);
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[4], 'h0800);
+        while(lc_c.pc != 17) #(CPU_CYCLE);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[5], 'd640);
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[6], 'd1);
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[5], 'd0);
+        #CPU_CYCLE;
+        #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.pc, 11);
+        
+        // while(lc_c.pc != 17) #(CPU_CYCLE);
+        // #CPU_CYCLE;
+        // `ASSERT_EQ(lc_c.cpu_c.reg_file[6], 'd2);
+        // #CPU_CYCLE;
+        // `ASSERT_EQ(lc_c.cpu_c.reg_file[5], 'd0);
+        // #CPU_CYCLE;
+        // #CPU_CYCLE;
+        // `ASSERT_EQ(lc_c.pc, 11);
+        // lc_c.cpu_c.reg_file[6] = 479;
+        // while(lc_c.pc != 17) #(CPU_CYCLE);
+        // #CPU_CYCLE;
+        // #CPU_CYCLE;
+        // #CPU_CYCLE;
+        // `ASSERT_EQ(lc_c.cpu_c.reg_file[5], 'd0);
+        // `ASSERT_EQ(lc_c.cpu_c.reg_file[6], 'd480);
+        // `ASSERT_EQ(lc_c.pc, 21);
+        // while(lc_c.pc < 20) begin
+        //     #(CPU_CYCLE*100000);
+        //     $display("time is ", $time);
+        // end
         // `ASSERT_EQ(0,1);
 
-        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd31, 10'd31}], 'hFFFF);
-        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd32, 10'd32}], 'hFFFF);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd0}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd1}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd200}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd639}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd0}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd1}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd200}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd639}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd479, 10'd0}], 'h0800);
+        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd479, 10'd639}], 'h0800);
 
-        while (lc_c.vga_c.v_count != 31) #SYS_CYCLE;
+        while (lc_c.vga_c.v_count != 0) #SYS_CYCLE;
         `ASSERT_EQ(lc_c.vga_c.mem_fetch_en, 0);
         while (lc_c.vga_c.h_count != 128) #SYS_CYCLE;
-        `ASSERT_EQ(lc_c.vga_c.mem_fetch_en, 1);
-        `ASSERT_EQ(lc_c.vga_c.mem_fetch_x_group, 0);
-        `ASSERT_EQ(lc_c.vga_c.mem_fetch_y_val, 31);
-        #CPU_CYCLE;
-        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf[31], 'hFFF);
-        `ASSERT_EQ(lc_c.vga_bgr_buf[31], 'hFFF);
-        `ASSERT_EQ(lc_c.mem_map_c.vga_bgr_buf[31], 'hFFF);
+        `ASSERT_EQ(lc_c.mem_map_c.vga_en, 1);
+        `ASSERT_EQ(lc_c.mem_map_c.vga_x_group, 0);
+        `ASSERT_EQ(lc_c.mem_map_c.vga_y_val, 0);
+
+        while (lc_c.mem_map_c.state !== lc_c.mem_map_c.STATE_FETCH_VGA) begin
+            #SYS_CYCLE;
+        end
+
+        `ASSERT_EQ(lc_c.mem_map_c.dram_addr, {6'b1, 9'd0, 10'd0});
+        $display("beginning test");
+        `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
+
+        #SYS_CYCLE;
+        while (lc_c.sdram_ctl_c.data_ready != 1) begin
+            #SYS_CYCLE;
+        end
+
+        // #CPU_CYCLE;
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf[31], 'h800);
+        `ASSERT_EQ(lc_c.vga_bgr_buf[31], 'h800);
+        `ASSERT_EQ(lc_c.mem_map_c.vga_bgr_buf[31], 'h800);
+        `ASSERT_EQ(lc_c.sdram_ctl_c.burst_buf[31], 'h800);
         // $display("%x", lc_c.vga_c.mem_bgr_buf[31]);
+        while (lc_c.vga_c.h_count != 160) #SYS_CYCLE;
+
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[0], 'h800);
+        $display(lc_c.vga_c.mem_bgr_buf_r[0]);
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[31], 'h800);
 
         $finish;
     end
