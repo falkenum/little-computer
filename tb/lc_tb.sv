@@ -3,7 +3,7 @@
 `timescale 1 ns / 1 ps
 module lc_tb;
 
-    logic CLK = 0, RST = 1;
+    logic clk = 0, rst = 1;
 	wire		    [12:0]		addr;
 	wire		     [1:0]		ba;
 	wire		          		ras_n;
@@ -26,8 +26,8 @@ module lc_tb;
         .dq(dq)
     );
     little_computer lc_c(
-        .MAX10_CLK1_50(CLK), 
-        .KEY({1'b1, RST}), 
+        .MAX10_CLK1_50(clk), 
+        .KEY({1'b1, rst}), 
         .SW(10'b0),
         .DRAM_ADDR(addr),
         .DRAM_BA(ba),
@@ -40,26 +40,26 @@ module lc_tb;
 
     initial begin
         forever begin
-            CLK = 1; #10;
-            CLK = 0; #10;
+            clk = 1; #10;
+            clk = 0; #10;
         end
     end
 
     task load_instr(string filename, integer length);
         $readmemh(filename, sdram_c.mem, 0, length - 1);
-        RST = 0; #SYS_CYCLE;
+        rst = 0; #SYS_CYCLE;
 
-        RST = 1; #SYS_CYCLE;
+        rst = 1; #SYS_CYCLE;
         while (lc_c.state != lc_c.STATE_RUNNING) begin
             #SYS_CYCLE;
         end
     endtask
 
     initial begin
-        RST = 0; #SYS_CYCLE;
-        RST = 1; #SYS_CYCLE;
+        rst = 0; #SYS_CYCLE;
+        rst = 1; #SYS_CYCLE;
 
-        load_instr("as/halt.mem", 1);
+        load_instr("s/halt.mem", 1);
         `ASSERT_EQ(lc_c.dram_ready, 1);
         `ASSERT_EQ(lc_c.pc, 0);
 
@@ -77,7 +77,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.pc, 0);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
 
-        load_instr("as/add.mem", 6);
+        load_instr("s/add.mem", 6);
         `ASSERT_EQ(lc_c.pc, 0);
 
         #(SYS_CYCLE*63);
@@ -128,20 +128,20 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
 
-        load_instr("as/arith.mem", 10);
+        load_instr("s/arith.mem", 10);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], -16'sd9);
 
-        load_instr("as/labels.mem", 4);
+        load_instr("s/labels.mem", 4);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
         `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 1);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 3);
 
-        load_instr("as/beq.mem", 11);
+        load_instr("s/beq.mem", 11);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
@@ -149,14 +149,14 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 8);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 5);
 
-        load_instr("as/j.mem", 4);
+        load_instr("s/j.mem", 4);
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
         end
         `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
 
-        load_instr("as/data.mem", 4);
+        load_instr("s/data.mem", 4);
         while (lc_c.cpu_c.halted === 0) #CPU_CYCLE;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h6001);
@@ -167,7 +167,7 @@ module lc_tb;
 
         `ASSERT_EQ(lc_c.state, lc_c.STATE_RUNNING);
         
-        load_instr("as/data2.mem", 7);
+        load_instr("s/data2.mem", 7);
 
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
@@ -178,7 +178,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 'h4042);
         `ASSERT_EQ(lc_c.sdram_c.mem[17], 'h4042);
 
-        load_instr("as/subroutine.mem", 6);
+        load_instr("s/subroutine.mem", 6);
 
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;
@@ -187,7 +187,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h1);
         `ASSERT_EQ(lc_c.cpu_c.lr, 'h5);
 
-        load_instr("as/stack.mem", 16);
+        load_instr("s/stack.mem", 16);
 
         while (lc_c.cpu_c.halted === 0) begin
             #CPU_CYCLE;

@@ -94,6 +94,7 @@ module little_computer(
     wire [31:0][15:0] dram_ctl_burst_buf;
 
     assign GPIO[9] = uart_tx;
+    assign GPIO[7:0] = {5'b0, uart_tx_ready, uart_tx, uart_rx};
 
     vga vga_c(
         .clk(sysclk),           // base clock

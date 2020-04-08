@@ -10,6 +10,8 @@ module lc_load_tb;
     reg [7:0] data_to_send;
     wire tx, ready_to_send;
     wire nada = 'bz;
+    wire [26:0] gpio_upper = {27{nada}};
+    wire [7:0] gpio_lower = {8{nada}};
     
 	wire		    [12:0]		addr;
 	wire		     [1:0]		ba;
@@ -42,8 +44,6 @@ module lc_load_tb;
         .dq(dq)
     );
 
-    wire [26:0] gpio_upper = {27{nada}};
-    wire [7:0] gpio_lower = {8{nada}};
     little_computer lc_c(
         .MAX10_CLK1_50(clk), 
         .KEY({1'b1, rst}), 

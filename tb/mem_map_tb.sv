@@ -145,7 +145,7 @@ module mem_map_tb;
         `ASSERT_EQ(mem_map_c.pc, 1);
         `ASSERT_EQ(mem_map_c.write_en, 0);
         `ASSERT_EQ(mem_map_c.data_addr, 2);
-        $readmemh("as/add.mem", sdram_c.mem, 0, 5);
+        $readmemh("s/add.mem", sdram_c.mem, 0, 5);
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
         while (sdram_ctl_c.mem_ready === 0) #SYS_CYCLE;
