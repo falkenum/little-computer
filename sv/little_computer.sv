@@ -179,6 +179,7 @@ module little_computer(
         .write_en(cpu_mem_write_en),
         .data_in(cpu_data),
         .clk(sysclk),
+        .clk_800k(clk_800k),
         .rst(sysrst),
         .uart_tx_ready(uart_tx_ready),
         .vga_en(vga_mem_fetch_en),
@@ -230,6 +231,7 @@ module little_computer(
     endfunction
 
     always @(posedge sysclk) begin
+
         if (~sysrst) begin
             clk_800k_count = 0;
             uart_word_count = 0;
@@ -240,7 +242,6 @@ module little_computer(
             internal_cpu_rst = 0;
         end
         else state = next_state_func(state);
-        clk_800k_count += 1;
 
         case(state)
             STATE_RESET: begin
@@ -248,6 +249,7 @@ module little_computer(
             end
             STATE_RUNNING: begin
                 internal_cpu_rst = 1;
+                clk_800k_count += 1;
             end
         endcase
 
@@ -263,7 +265,6 @@ module little_computer(
         end
 
         load_en_vals = {load_en_vals[0], load_en};
-
     end
 
 endmodule

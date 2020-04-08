@@ -15,7 +15,6 @@ module vga(
     output [8:0] mem_fetch_y_val
 );
 
-    // VGA timings https://timetoexplore.net/blog/video-timings-vga-720p-1080p
     localparam HS_START = 16;              // horizontal sync start
     localparam HS_END = 16 + 96;         // horizontal sync end
     localparam HA_START = 16 + 96 + 48;    // horizontal active pixel start
@@ -38,9 +37,9 @@ module vga(
     assign mem_fetch_y_val = v_count[8:0];
 
 
-    // assign rval = active ? mem_bgr_buf_r[h_count % 32][3:0] : 4'b0;
-    // assign gval = active ? mem_bgr_buf_r[h_count % 32][7:4] : 4'b0;
-    // assign bval = active ? mem_bgr_buf_r[h_count % 32][11:8] : 4'b0;
+    assign rval = active ? mem_bgr_buf_r[h_count % 32][3:0] : 4'b0;
+    assign gval = active ? mem_bgr_buf_r[h_count % 32][7:4] : 4'b0;
+    assign bval = active ? mem_bgr_buf_r[h_count % 32][11:8] : 4'b0;
 
     // keep x and y bound within the active pixels
     // assign x = (h_count < HA_START) ? 0 : (h_count - HA_START);

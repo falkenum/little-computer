@@ -2,7 +2,7 @@
 
 `timescale 1 ns/ 1 ps
 module vga_tb;
-    reg clk = 0, rst = 1;
+    reg clk = 0, rst = 1, i = 0;
     reg [31:0][11:0] mem_bgr_buf = 0;
 	wire		    [12:0]		addr;
 	wire		     [1:0]		ba;
@@ -121,11 +121,11 @@ module vga_tb;
         `ASSERT_EQ(lc_c.mem_map_c.vga_y_val, 0);
 
         while (lc_c.mem_map_c.state !== lc_c.mem_map_c.STATE_FETCH_VGA) begin
+            // $display(lc_c.mem_map_c.state);
             #SYS_CYCLE;
         end
 
         `ASSERT_EQ(lc_c.mem_map_c.dram_addr, {6'b1, 9'd0, 10'd0});
-        $display("beginning test");
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
 
         #SYS_CYCLE;
@@ -142,8 +142,15 @@ module vga_tb;
         while (lc_c.vga_c.h_count != 160) #SYS_CYCLE;
 
         `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[0], 'h800);
-        $display(lc_c.vga_c.mem_bgr_buf_r[0]);
         `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[31], 'h800);
+
+        while (lc_c.vga_c.h_count != 192) begin
+            `ASSERT_EQ(lc_c.vga_c.rval, 'h0);
+            `ASSERT_EQ(lc_c.vga_c.gval, 'h0);
+            `ASSERT_EQ(lc_c.vga_c.bval, 'h8);
+            #SYS_CYCLE;
+        end
+
 
         $finish;
     end

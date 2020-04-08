@@ -194,6 +194,7 @@ module sdram_ctl(
 
             end
             STATE_BURST_STOP: begin
+                data_ready = 1;
                 cmd = CMD_BST;
             end
 

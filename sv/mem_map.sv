@@ -14,6 +14,7 @@ module mem_map(
     input [4:0] vga_x_group,
     input [8:0] vga_y_val,
     input clk,
+    input clk_800k,
     input rst,
     output dram_refresh_data,
     output [31:0][11:0] vga_bgr_buf,
@@ -53,9 +54,9 @@ module mem_map(
 
     reg [2:0] state;
     reg [5:0] wait_count;
-    reg [`WORD_WIDTH-1:0] last_pc;
     reg got_instr, got_data;
     reg [1:0] uart_tx_ready_vals;
+    reg [2:0] clk_800k_vals;
     reg [1:0] vga_write_state;
     reg [9:0] vga_x_in;
     reg [8:0] vga_y_in;
@@ -73,9 +74,8 @@ module mem_map(
         input [2:0] state;
         case(state)
             STATE_IDLE:
-                // TODO use some condition other than the pc changing
-                // might be a problem if I ever implement interrupts and use an infinite loop
-                if (cpu_ready && pc != last_pc) next_state_func = STATE_FETCH_INSTR;
+                // need to change state the tick after pc is updated
+                if (cpu_ready && clk_800k_vals == 3'b011) next_state_func = STATE_FETCH_INSTR;
                 else next_state_func = state;
             STATE_FETCH_INSTR:
                 next_state_func = STATE_WAIT;
@@ -102,6 +102,7 @@ module mem_map(
     always @(posedge clk) begin
         // reset start_n as on posedge of uart_tx_ready
         uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
+        if (cpu_ready) clk_800k_vals = {clk_800k_vals[1:0], clk_800k};
         if (uart_tx_ready_vals == 2'b01) begin
             // $display("resetting start_n");
             uart_tx_start_n = 1;
@@ -109,7 +110,7 @@ module mem_map(
 
         if (~rst) begin
             state = STATE_IDLE;
-            last_pc = 0;
+            clk_800k_vals = 3'b00;
             wait_count = 0;
             got_instr = 0;
             got_data = 0;
@@ -117,15 +118,14 @@ module mem_map(
             uart_tx_ready_vals = 2'b11;
             vga_write_state = VGA_WRITE_STATE_X;
             dram_burst_en = 1'b0;
-            // nop
-            instr = 'hF000;
+            led = 10'b0;
+            instr = 'hFFFF;
         end
 
         else state = next_state_func(state);
 
         case(state)
             STATE_IDLE: begin
-                last_pc = ~cpu_ready ? 'hffff : pc;
             end 
             STATE_FETCH_INSTR: begin
                 dram_burst_en = 0;
@@ -157,9 +157,10 @@ module mem_map(
                 end
 
                 // $display("fetching/writing to addr %x", data_addr);
-                if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
-                    led[data_addr - LED_FIRST] = data_in[0];
-                end
+                // if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
+                //     $display("led accessed");
+                //     led[data_addr - LED_FIRST] = data_in[0];
+                // end
 
                 if (write_en && data_addr == UART_TX_BYTE) begin
                     
