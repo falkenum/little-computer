@@ -53,8 +53,7 @@ module sdram_sim(
         endcase
     endfunction
 
-    always @(posedge clk) begin
-        #1;
+    always @(negedge clk) begin
         state = next_state_func(state);
         case(state)
             STATE_IDLE: begin
@@ -67,6 +66,7 @@ module sdram_sim(
             end
             STATE_CMD_WRITE: begin
                 rw_addr[9:0] = addr[9:0];
+                drive_val = 0;
                 // $display("writing %x to addr %x", dq, rw_addr);
                 // $display("dram_addr during write: %x", addr);
                 mem[rw_addr] = dq;
@@ -74,11 +74,9 @@ module sdram_sim(
             STATE_CMD_READ: begin
                 rw_addr[9:0] = addr[9:0];
 
+                drive_val = 1;
+                dq_val = mem[rw_addr + {18'b0, state_read_count}];
                 state_read_count += 1;
-                if (state_read_count >= 2) begin
-                    dq_val = mem[rw_addr + state_read_count - 2];
-                    drive_val = 1;
-                end
             end
         endcase
     end

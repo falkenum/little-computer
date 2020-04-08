@@ -138,21 +138,52 @@ module mem_map_tb;
 
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
 
+        $readmemh("s/add.mem", sdram_c.mem, 0, 5);
         pc = 1;
         write_en = 0;
         data_addr = 2;
         data_in = 3;
-        `ASSERT_EQ(mem_map_c.pc, 1);
-        `ASSERT_EQ(mem_map_c.write_en, 0);
-        `ASSERT_EQ(mem_map_c.data_addr, 2);
-        $readmemh("s/add.mem", sdram_c.mem, 0, 5);
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
-        while (sdram_ctl_c.mem_ready === 0) #SYS_CYCLE;
-        #CPU_CYCLE;
+        while (sdram_ctl_c.mem_ready !== 1) #SYS_CYCLE;
+        while (!clk_800k) #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_FETCH_INSTR);
+        $display("%x", mem_map_c.dram_addr);
+        $display("%x", sdram_ctl_c.addr_r);
+        $display("%x", sdram_c.addr_r);
+        #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
+        $display("%x", mem_map_c.dram_addr);
+        $display("%x", sdram_ctl_c.addr_r);
+        $display("%x", sdram_c.addr_r);
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_READ);
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_WAIT);
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_ACTIVATED);
+        $display("%x", mem_map_c.dram_addr);
+        $display("%x", sdram_ctl_c.addr_r);
+        $display("%x", sdram_c.addr_r);
+
+        $finish;
+
+        $display("%x", sdram_c.dq_val);
+        #SYS_CYCLE;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+        #SYS_CYCLE;
+        $display("%x", sdram_ctl_c.data_out);
+        while (mem_map_c.state !== mem_map_c.STATE_INSTR_OUT) begin
+            #SYS_CYCLE;
+        end
+        $display("%x", mem_map_c.instr);
+        $display("%x", mem_map_c.dram_read_data);
         `ASSERT_EQ(mem_map_c.instr, 'h0009);
         `ASSERT_EQ(mem_map_c.dram_read_data, 'h0049);
 
+        $finish;
         pc = 3;
         write_en = 0;
         data_addr = 4;

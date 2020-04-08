@@ -167,16 +167,21 @@ module sdram_ctl(
 
                 cmd = CMD_ACT;
                 {dram_ba, dram_addr} = addr_r[24:10];
+                $display("ctl addr on activate: %x", dram_addr);
             end
             STATE_WRITE: begin
                 cmd = CMD_WRITE;
                 dq_val = data_in_r;
+                dram_addr = 0;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
+                $display("ctl addr on write: %x", dram_addr);
                 drive_val = 1;
             end
             STATE_READ: begin
                 cmd = CMD_READ;
+                dram_addr = 0;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
+                $display("ctl addr on read: %x", dram_addr);
                 wait_count = 0;
             end
             STATE_POST_READ: begin
@@ -187,8 +192,6 @@ module sdram_ctl(
                     if (~burst_en) data_out = dram_dq;
                     else begin
                         burst_buf[post_read_count - 2] = dram_dq;
-                        // $display("wrote data %x to index %d of buf", dram_dq, post_read_count - 2);
-                        // $display("reading: %x", burst_buf[post_read_count - 2]);
                     end
                 end
 
