@@ -79,6 +79,8 @@ module vga_tb;
         #CPU_CYCLE;
         #CPU_CYCLE;
         `ASSERT_EQ(lc_c.pc, 11);
+        //  do second row
+        while(lc_c.pc != 17) #(CPU_CYCLE);
         
         // while(lc_c.pc != 17) #(CPU_CYCLE);
         // #CPU_CYCLE;
@@ -106,10 +108,10 @@ module vga_tb;
         `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd1}], 'h0800);
         `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd200}], 'h0800);
         `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd0, 10'd639}], 'h0800);
-        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd0}], 'h0800);
-        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd1}], 'h0800);
-        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd200}], 'h0800);
-        // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd639}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd0}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd1}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd200}], 'h0800);
+        `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd1, 10'd639}], 'h0800);
         // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd479, 10'd0}], 'h0800);
         // `ASSERT_EQ(sdram_c.mem[{6'b1, 9'd479, 10'd639}], 'h0800);
 
@@ -121,7 +123,6 @@ module vga_tb;
         `ASSERT_EQ(lc_c.mem_map_c.vga_y_val, 0);
 
         while (lc_c.mem_map_c.state !== lc_c.mem_map_c.STATE_FETCH_VGA) begin
-            // $display(lc_c.mem_map_c.state);
             #SYS_CYCLE;
         end
 
@@ -142,6 +143,10 @@ module vga_tb;
         while (lc_c.vga_c.h_count != 160) #SYS_CYCLE;
 
         `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[0], 'h800);
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[10], 'h800);
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[15], 'h800);
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[20], 'h800);
+        `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[21], 'h800);
         `ASSERT_EQ(lc_c.vga_c.mem_bgr_buf_r[31], 'h800);
 
         while (lc_c.vga_c.h_count != 192) begin
@@ -151,6 +156,15 @@ module vga_tb;
             #SYS_CYCLE;
         end
 
+
+        while (lc_c.vga_c.v_count != 1) #SYS_CYCLE;
+        while (lc_c.vga_c.h_count != 160) #SYS_CYCLE;
+        while (lc_c.vga_c.h_count != 192) begin
+            `ASSERT_EQ(lc_c.vga_c.rval, 'h0);
+            `ASSERT_EQ(lc_c.vga_c.gval, 'h0);
+            `ASSERT_EQ(lc_c.vga_c.bval, 'h8);
+            #SYS_CYCLE;
+        end
 
         $finish;
     end

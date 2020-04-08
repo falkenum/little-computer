@@ -31,15 +31,16 @@ module vga(
     reg [31:0][11:0] mem_bgr_buf_r;
 
     wire active = ~((h_count < HA_START) | (v_count > VA_END - 1)); 
+    wire buf_i = h_count & 10'h1F;
 
     assign mem_fetch_en = v_count < VA_END ? h_count >= 128 : 0;
     assign mem_fetch_x_group = (h_count - 128) >> 5;
     assign mem_fetch_y_val = v_count[8:0];
 
 
-    assign rval = active ? mem_bgr_buf_r[h_count % 32][3:0] : 4'b0;
-    assign gval = active ? mem_bgr_buf_r[h_count % 32][7:4] : 4'b0;
-    assign bval = active ? mem_bgr_buf_r[h_count % 32][11:8] : 4'b0;
+    assign rval = active ? mem_bgr_buf_r[0][3:0] : 4'b0;
+    assign gval = active ? mem_bgr_buf_r[0][7:4] : 4'b0;
+    assign bval = active ? mem_bgr_buf_r[0][11:8] : 4'b0;
 
     // keep x and y bound within the active pixels
     // assign x = (h_count < HA_START) ? 0 : (h_count - HA_START);

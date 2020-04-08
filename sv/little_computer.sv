@@ -61,7 +61,6 @@ module little_computer(
     localparam STATE_RUNNING = 1;
 
     // assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_tx, uart_rx};
-    assign GPIO[9] = uart_tx;
 
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
@@ -93,6 +92,8 @@ module little_computer(
     wire [8:0] vga_y_val;
     wire [31:0][11:0] vga_bgr_buf;
     wire [31:0][15:0] dram_ctl_burst_buf;
+
+    assign GPIO[9] = uart_tx;
 
     vga vga_c(
         .clk(sysclk),           // base clock
