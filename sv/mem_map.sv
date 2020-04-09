@@ -61,8 +61,6 @@ module mem_map(
     reg [9:0] vga_x_in;
     reg [8:0] vga_y_in;
 
-    wire [15:0] led_i = data_addr - LED_FIRST;
-
     genvar i;
     generate
         for (i=0; i < 32; i = i + 1) begin : for_buf
@@ -105,7 +103,6 @@ module mem_map(
         // reset start_n as on posedge of uart_tx_ready
         uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
         if (cpu_ready) clk_800k_vals = {clk_800k_vals[1:0], clk_800k};
-
         if (uart_tx_ready_vals == 2'b01) begin
             // $display("resetting start_n");
             uart_tx_start_n = 1;
@@ -133,7 +130,6 @@ module mem_map(
             STATE_FETCH_INSTR: begin
                 dram_burst_en = 0;
                 dram_write_en = 1'b0;
-                /* verilator lint_off UNSIGNED */
                 if (pc >= DRAM_FIRST && pc <= DRAM_LAST) begin
                     dram_addr = {9'b0, pc}; 
                 end else begin
@@ -151,8 +147,7 @@ module mem_map(
                 got_instr = 1;
             end
             STATE_RW_DATA: begin
-                /* verilator lint_off UNSIGNED */
-                if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin 
+                if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
                     dram_data_in = data_in;
                     dram_addr = {9'b0, data_addr}; 
                     dram_write_en = write_en;
@@ -161,14 +156,8 @@ module mem_map(
                     dram_write_en = 1'b0;
                 end
 
-<<<<<<< HEAD
-                // $display("fetching/writing to addr %x", data_addr);
-                if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
-                    led[led_i[3:0]] = data_in[0];
-=======
                 if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
                     led[data_addr - LED_FIRST] = data_in[0];
->>>>>>> fixes
                 end
 
                 if (write_en && data_addr == UART_TX_BYTE) begin

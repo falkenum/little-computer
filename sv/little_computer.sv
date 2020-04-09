@@ -105,7 +105,7 @@ module little_computer(
         .rval(VGA_R),
         .gval(VGA_G),
         .bval(VGA_B),
-        .vblank(),     // high during blanking interval
+        // .vblank()     // high during blanking interval
         .mem_fetch_en(vga_mem_fetch_en),
         .mem_fetch_x_group(vga_x_group),
         .mem_fetch_y_val(vga_y_val),
