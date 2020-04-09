@@ -75,8 +75,8 @@ module sdram_sim(
                 rw_addr[9:0] = addr[9:0];
 
                 state_read_count += 1;
-                if (state_read_count >= 2) begin
-                    dq_val = mem[rw_addr + state_read_count - 2];
+                if (state_read_count >= 3) begin
+                    dq_val = mem[rw_addr + state_read_count - 3];
                     drive_val = 1;
                 end
             end
