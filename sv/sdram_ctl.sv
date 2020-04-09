@@ -42,6 +42,7 @@ module sdram_ctl(
 	localparam STATE_READ = 7;
 	localparam STATE_POST_READ = 8;
 	localparam STATE_BURST_STOP = 9;
+	localparam STATE_PRECHARGE = 10;
 
     localparam CMD_NOP = 3'b111;
     localparam CMD_PRE = 3'b010;
@@ -94,19 +95,22 @@ module sdram_ctl(
                 if (write_en_r) next_state_func = STATE_WRITE;
                 else next_state_func = STATE_READ;
             STATE_WRITE: begin
-                next_state_func = STATE_IDLE;
+                next_state_func = STATE_PRECHARGE;
             end
             STATE_READ: begin
                 next_state_func = STATE_POST_READ;
             end
             STATE_POST_READ: begin
                 // CAS latency is 2, 
-                if ((~burst_en && post_read_count == 2) ||
-                 (burst_en && post_read_count == 33)) next_state_func = STATE_BURST_STOP;
+                if ((~burst_en && post_read_count == 3) ||
+                 (burst_en && post_read_count == 34)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
                 // $display("burst en: %b, read count: %d", burst_en, post_read_count);
             end
             STATE_BURST_STOP: begin
+                next_state_func = STATE_PRECHARGE;
+            end
+            STATE_PRECHARGE: begin
                 next_state_func = STATE_IDLE;
             end
             default: next_state_func = STATE_RST_NOP;
@@ -148,7 +152,7 @@ module sdram_ctl(
             STATE_RST_MODE_WRITE: begin
                 cmd = CMD_MRS;
                 dram_ba = 2'b00;
-                // CAS latency = 2, burst length 64, single write
+                // CAS latency = 2, burst length is page length, single write
                 dram_addr[12:0] = {3'b000, 1'b1, 2'b0, 3'b010, 1'b0, 3'b111};
                 wait_count = 0;
             end
@@ -179,19 +183,27 @@ module sdram_ctl(
             end
             STATE_READ: begin
                 cmd = CMD_READ;
+<<<<<<< HEAD
                 dram_addr = 0;
                 {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b1, addr_r[9:0]};
                 $display("ctl addr on read: %x", dram_addr);
+=======
+                {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
+>>>>>>> fixes
                 wait_count = 0;
             end
             STATE_POST_READ: begin
                 cmd = CMD_NOP;
                 post_read_count += 1;
-                if (post_read_count >= 2) begin
+                if (post_read_count >= 3) begin
 
                     if (~burst_en) data_out = dram_dq;
                     else begin
+<<<<<<< HEAD
                         burst_buf[post_read_count - 2] = dram_dq;
+=======
+                        burst_buf[post_read_count - 3] = dram_dq;
+>>>>>>> fixes
                     end
                 end
 
@@ -200,10 +212,11 @@ module sdram_ctl(
                 data_ready = 1;
                 cmd = CMD_BST;
             end
+            STATE_PRECHARGE: begin
+                cmd = CMD_PRE;
+            end
 
         endcase
-    
-
 
     end
 endmodule

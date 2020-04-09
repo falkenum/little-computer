@@ -134,7 +134,7 @@ module mem_map_tb;
         `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
         while(!sdram_ctl_c.mem_ready) #SYS_CYCLE;
         while(mem_map_c.state != mem_map_c.STATE_IDLE) #SYS_CYCLE;
-        while (clk_800k) #SYS_CYCLE;
+        // while (clk_800k) #SYS_CYCLE;
 
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
 
@@ -145,6 +145,7 @@ module mem_map_tb;
         data_in = 3;
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
+<<<<<<< HEAD
         while (sdram_ctl_c.mem_ready !== 1) #SYS_CYCLE;
         while (!clk_800k) #SYS_CYCLE;
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
@@ -180,8 +181,13 @@ module mem_map_tb;
         end
         $display("%x", mem_map_c.instr);
         $display("%x", mem_map_c.dram_read_data);
+=======
+        while (sdram_ctl_c.mem_ready === 0) #SYS_CYCLE;
+        while (!clk_800k)
+        #CPU_CYCLE;
+>>>>>>> fixes
         `ASSERT_EQ(mem_map_c.instr, 'h0009);
-        `ASSERT_EQ(mem_map_c.dram_read_data, 'h0049);
+        `ASSERT_EQ(data_out, 'h0049);
 
         $finish;
         pc = 3;

@@ -60,7 +60,7 @@ module vga_tb;
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
 
-        load_instr("s/vga.mem", 25);
+        load_instr("s/vga.mem", 22);
         while (lc_c.cpu_c.pc != 5) #CPU_CYCLE;
         #CPU_CYCLE;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'hF80C);

@@ -77,6 +77,13 @@ module sdram_sim(
                 drive_val = 1;
                 dq_val = mem[rw_addr + {18'b0, state_read_count}];
                 state_read_count += 1;
+<<<<<<< HEAD
+=======
+                if (state_read_count >= 3) begin
+                    dq_val = mem[rw_addr + state_read_count - 3];
+                    drive_val = 1;
+                end
+>>>>>>> fixes
             end
         endcase
     end

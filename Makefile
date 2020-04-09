@@ -1,4 +1,4 @@
-SUBDIRS=as tb
+SUBDIRS=s tb
 all:
 	for dir in $(SUBDIRS); do $(MAKE) -C $$dir; done
 clean:

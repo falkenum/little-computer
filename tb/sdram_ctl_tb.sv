@@ -69,6 +69,12 @@ module sdram_ctl_tb;
         #20;
         #20;
         #20;
+<<<<<<< HEAD
+=======
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_READ);
+>>>>>>> fixes
+        #20;
         #20;
         #20;
         #20;
@@ -76,11 +82,30 @@ module sdram_ctl_tb;
         data_in = 'hff;
         write_en = 1;
         #20;
+<<<<<<< HEAD
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
         #20;
         #20;
         `ASSERT_EQ(sdram_c.mem[0], 'hff);
         `ASSERT_EQ(sdram_ctl_c.data_in_r, 'hff);
+=======
+        #20;
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_ACTIVATED);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
+        #20;
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_CMD_WRITE);
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_WRITE);
+        `ASSERT_EQ(sdram_ctl_c.data_in_r, 'hff);
+        #20;
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_IDLE);
+        `ASSERT_EQ(sdram_c.dq, 'hff);
+        #20;
+        #20;
+        `ASSERT_EQ(sdram_c.state, sdram_c.STATE_ACTIVATED);
+        `ASSERT_EQ(sdram_c.mem[0], 'hff);
+        #20;
+        #20;
+>>>>>>> fixes
         addr = 1;
         data_in = 'hfe;
         write_en = 1;
@@ -90,7 +115,11 @@ module sdram_ctl_tb;
         `ASSERT_EQ(sdram_c.rw_addr[24:10], 0);
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_WRITE);
         #20;
+<<<<<<< HEAD
         `ASSERT_EQ(sdram_ctl_c.dram_addr, 1);
+=======
+        #20;
+>>>>>>> fixes
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
         `ASSERT_EQ(sdram_c.rw_addr, 1);
         #20;
@@ -111,6 +140,7 @@ module sdram_ctl_tb;
         #20;
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
         $display("begin");
+        #20;
         #20;
         `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
         `ASSERT_EQ(sdram_c.drive_val, 1);
@@ -142,6 +172,7 @@ module sdram_ctl_tb;
             `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_ACTIVATE);
             #20;
             `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_WRITE);
+            #20;
             #20;
             `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
             `ASSERT_EQ(sdram_c.mem[addr], 'h20-addr[15:0]);

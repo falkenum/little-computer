@@ -161,9 +161,14 @@ module mem_map(
                     dram_write_en = 1'b0;
                 end
 
+<<<<<<< HEAD
                 // $display("fetching/writing to addr %x", data_addr);
                 if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
                     led[led_i[3:0]] = data_in[0];
+=======
+                if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
+                    led[data_addr - LED_FIRST] = data_in[0];
+>>>>>>> fixes
                 end
 
                 if (write_en && data_addr == UART_TX_BYTE) begin
@@ -210,6 +215,8 @@ module mem_map(
                 dram_burst_en = 1;
                 dram_write_en = 0;
                 dram_addr = {6'b1, vga_y_val, vga_x_group, 5'b0};
+                // dram_addr = {6'b0, 9'b0, 5'h0, 5'h1F};
+                dram_addr = 0;
                 wait_count = 0;
             end
         endcase

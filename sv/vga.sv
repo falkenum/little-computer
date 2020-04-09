@@ -38,9 +38,9 @@ module vga(
     assign mem_fetch_y_val = v_count[8:0];
 
 
-    assign rval = active ? mem_bgr_buf_r[0][3:0] : 4'b0;
-    assign gval = active ? mem_bgr_buf_r[0][7:4] : 4'b0;
-    assign bval = active ? mem_bgr_buf_r[0][11:8] : 4'b0;
+    // assign rval = active ? mem_bgr_buf_r[h_count & 'h1F][3:0] : 4'b0;
+    // assign gval = active ? mem_bgr_buf_r[h_count & 'h1F][7:4] : 4'b0;
+    // assign bval = active ? mem_bgr_buf_r[h_count & 'h1F][11:8] : 4'b0;
 
     // keep x and y bound within the active pixels
     // assign x = (h_count < HA_START) ? 0 : (h_count - HA_START);
