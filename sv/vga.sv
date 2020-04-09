@@ -4,11 +4,12 @@ module vga(
     input clk_800k,           
     input rst,           // reset: restarts frame
     input [31:0][11:0] mem_bgr_buf,
-    output reg hs,           // horizontal sync
-    output reg vs,           // vertical sync
-    output reg [3:0] rval,
-    output reg [3:0] gval,
-    output reg [3:0] bval,
+    input enable,
+    output hs,           // horizontal sync
+    output vs,           // vertical sync
+    output [3:0] rval,
+    output [3:0] gval,
+    output [3:0] bval,
     output vblank,
     output mem_fetch_en,
     output [4:0] mem_fetch_x_group,
@@ -30,17 +31,21 @@ module vga(
     reg [1:0] clk_800k_vals;
     reg [31:0][11:0] mem_bgr_buf_r;
 
-    wire active = ~((h_count < HA_START) | (v_count > VA_END - 1)); 
+    wire active = enable & ~((h_count < HA_START) | (v_count > VA_END - 1)); 
     wire buf_i = h_count & 10'h1F;
 
-    assign mem_fetch_en = v_count < VA_END ? h_count >= 128 : 0;
+    assign mem_fetch_en = (enable && v_count < VA_END) ? (h_count >= 128 && h_count < 768) : 0;
     assign mem_fetch_x_group = (h_count - 128) >> 5;
+    // assign mem_fetch_x_group = 1;
     assign mem_fetch_y_val = v_count[8:0];
+    // assign mem_fetch_y_val = 0;
 
 
-    // assign rval = active ? mem_bgr_buf_r[h_count & 'h1F][3:0] : 4'b0;
-    // assign gval = active ? mem_bgr_buf_r[h_count & 'h1F][7:4] : 4'b0;
-    // assign bval = active ? mem_bgr_buf_r[h_count & 'h1F][11:8] : 4'b0;
+    assign rval = active ? mem_bgr_buf_r[h_count & 'h1F][3:0] : 4'b0;
+    assign gval = active ? mem_bgr_buf_r[h_count & 'h1F][7:4] : 4'b0;
+    assign bval = active ? mem_bgr_buf_r[h_count & 'h1F][11:8] : 4'b0;
+    assign hs = ~((h_count >= HS_START) & (h_count < HS_END));
+    assign vs = ~((v_count >= VS_START) & (v_count < VS_END));
 
     // keep x and y bound within the active pixels
     // assign x = (h_count < HA_START) ? 0 : (h_count - HA_START);
@@ -84,8 +89,6 @@ module vga(
 
             if (v_count == LINES_PER_SCREEN)  // end of screen
                 v_count = 0;
-            hs = ~((h_count >= HS_START) & (h_count < HS_END));
-            vs = ~((v_count >= VS_START) & (v_count < VS_END));
         end
     end
 endmodule

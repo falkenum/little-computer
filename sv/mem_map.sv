@@ -204,8 +204,8 @@ module mem_map(
                 dram_burst_en = 1;
                 dram_write_en = 0;
                 dram_addr = {6'b1, vga_y_val, vga_x_group, 5'b0};
+                led = ~dram_addr[9:0];
                 // dram_addr = {6'b0, 9'b0, 5'h0, 5'h1F};
-                dram_addr = 0;
                 wait_count = 0;
             end
         endcase

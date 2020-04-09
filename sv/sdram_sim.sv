@@ -47,7 +47,7 @@ module sdram_sim(
             STATE_CMD_WRITE:
                 next_state_func = STATE_IDLE;
             STATE_CMD_READ:
-                if ((state_read_count >= 2 && cmd == CMD_BST) || state_read_count == 66) next_state_func = STATE_IDLE;
+                if ((state_read_count >= 3 && cmd == CMD_BST) || state_read_count == 66) next_state_func = STATE_IDLE;
                 else next_state_func = state;
             default: next_state_func = STATE_IDLE;
         endcase

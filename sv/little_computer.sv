@@ -67,7 +67,7 @@ module little_computer(
     reg [1:0] load_en_vals;
     reg [1:0] key1_vals;
     reg [1:0] state;
-    reg internal_cpu_rst;
+    reg internal_rst;
     reg [5:0] clk_800k_count;
 
     wire clk_800k = ~clk_800k_count[5];
@@ -77,7 +77,7 @@ module little_computer(
     wire debug_mode = SW[0];
     wire debug_clk = ~KEY[1];
     wire load_en = SW[1];
-    wire cpu_rst = sysrst & internal_cpu_rst;
+    wire cpu_rst = sysrst & internal_rst;
     wire cpu_ready = state == STATE_RUNNING;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
@@ -105,7 +105,8 @@ module little_computer(
         .rval(VGA_R),
         .gval(VGA_G),
         .bval(VGA_B),
-        // .vblank()     // high during blanking interval
+        .enable(dram_ready),
+        .vblank(),     // high during blanking interval
         .mem_fetch_en(vga_mem_fetch_en),
         .mem_fetch_x_group(vga_x_group),
         .mem_fetch_y_val(vga_y_val),
@@ -241,16 +242,16 @@ module little_computer(
             state = STATE_RESET;
             load_en_vals = 2'b11;
             key1_vals = 2'b11;
-            internal_cpu_rst = 0;
+            internal_rst = 0;
         end
         else state = next_state_func(state);
 
         case(state)
             STATE_RESET: begin
-                internal_cpu_rst = 0;
+                internal_rst = 0;
             end
             STATE_RUNNING: begin
-                internal_cpu_rst = 1;
+                internal_rst = 1;
                 clk_800k_count += 1;
             end
         endcase

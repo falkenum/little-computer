@@ -149,7 +149,7 @@ module mem_map_tb;
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
         while (sdram_ctl_c.mem_ready === 0) #SYS_CYCLE;
-        while (!clk_800k)
+        while (!clk_800k) #SYS_CYCLE;
         #CPU_CYCLE;
         `ASSERT_EQ(mem_map_c.instr, 'h0009);
         `ASSERT_EQ(data_out, 'h0049);
