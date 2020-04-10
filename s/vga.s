@@ -6,7 +6,7 @@ pix_per_line:
 lines_per_screen:
     .word 01E0 #480 in decimal
 bgr:
-    .word 0800
+    .word 0FFF
 start:
     # store the write addr into r1
     lw vga_write_addr r0 r1

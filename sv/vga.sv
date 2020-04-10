@@ -1,7 +1,8 @@
 
 module vga(
     input clk,           // base clock
-    input clk_800k,           
+    input mem_stb,           
+    input pix_stb,           
     input rst,           // reset: restarts frame
     input [31:0][11:0] mem_bgr_buf,
     input enable,
@@ -27,8 +28,6 @@ module vga(
 
     reg [9:0] h_count;  // line position
     reg [9:0] v_count;  // screen position
-    reg clk_25M;
-    reg [1:0] clk_800k_vals;
     reg [31:0][11:0] mem_bgr_buf_r;
 
     wire active = enable & ~((h_count < HA_START) | (v_count > VA_END - 1)); 
@@ -65,30 +64,26 @@ module vga(
     always @ (posedge clk) begin
         if (~rst)  // reset to start of frame
         begin
-            h_count = 0;
-            v_count = 0;
-            clk_25M = 0;
-            clk_800k_vals = 2'b11;
+            h_count <= 0;
+            v_count <= 0;
         end
-        clk_800k_vals = {clk_800k_vals[0], clk_800k};
-        clk_25M = ~clk_25M;    
 
-        if (clk_800k_vals == 2'b01) begin
-            mem_bgr_buf_r = mem_bgr_buf;
+        if (mem_stb) begin
+            mem_bgr_buf_r <= mem_bgr_buf;
         end
         
-        if (clk_25M)
+        if (pix_stb)
         begin
-            if (h_count == TICKS_PER_LINE)  // end of line
+            if (h_count == TICKS_PER_LINE - 1)  // end of line
             begin
-                h_count = 0;
-                v_count = v_count + 1;
+                h_count <= 0;
+                v_count <= v_count + 1;
             end
             else 
-                h_count = h_count + 1;
+                h_count <= h_count + 1;
 
             if (v_count == LINES_PER_SCREEN)  // end of screen
-                v_count = 0;
+                v_count <= 0;
         end
     end
 endmodule

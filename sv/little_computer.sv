@@ -69,6 +69,8 @@ module little_computer(
     reg [1:0] state;
     reg internal_rst;
     reg [5:0] clk_800k_count;
+    reg [15:0] vga_pix_stb_cnt, vga_mem_stb_cnt;
+    reg vga_pix_stb, vga_mem_stb;
 
     wire clk_800k = ~clk_800k_count[5];
     wire sysclk = MAX10_CLK1_50;
@@ -99,7 +101,8 @@ module little_computer(
     vga vga_c(
         .clk(sysclk),           // base clock
         .rst(sysrst),           // reset: restarts frame
-        .clk_800k(clk_800k),
+        .pix_stb(vga_pix_stb),
+        .mem_stb(vga_mem_stb),
         .hs(VGA_HS),           // horizontal sync
         .vs(VGA_VS),           // vertical sync
         .rval(VGA_R),
@@ -243,6 +246,10 @@ module little_computer(
             load_en_vals = 2'b11;
             key1_vals = 2'b11;
             internal_rst = 0;
+            vga_pix_stb = 0;
+            vga_mem_stb = 0;
+            vga_pix_stb_cnt = 0;
+            vga_pix_stb_cnt = 0;
         end
         else state = next_state_func(state);
 
@@ -255,6 +262,12 @@ module little_computer(
                 clk_800k_count += 1;
             end
         endcase
+
+        // div by 2
+        {vga_pix_stb, vga_pix_stb_cnt} = vga_pix_stb_cnt + 16'h8000;
+        // div by 64
+        {vga_mem_stb, vga_mem_stb_cnt} = vga_mem_stb_cnt + 16'h0400;
+
 
         // inc counter on negedge of uart_word_ready, its value is used on the posedge by sdram
         if (uart_word_ready_vals[1] == 1 && uart_word_ready_vals[0] == 0) begin
