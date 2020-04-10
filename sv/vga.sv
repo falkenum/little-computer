@@ -31,7 +31,6 @@ module vga(
     reg [31:0][11:0] mem_bgr_buf_r;
 
     wire active = enable & ~((h_count < HA_START) | (v_count > VA_END - 1)); 
-    wire buf_i = h_count & 10'h1F;
 
     assign mem_fetch_en = (enable && v_count < VA_END) ? (h_count >= 128 && h_count < 768) : 0;
     assign mem_fetch_x_group = (h_count - 128) >> 5;
@@ -82,7 +81,7 @@ module vga(
             else 
                 h_count <= h_count + 1;
 
-            if (v_count == LINES_PER_SCREEN)  // end of screen
+            if (v_count == LINES_PER_SCREEN - 1)  // end of screen
                 v_count <= 0;
         end
     end

@@ -2,7 +2,7 @@
 
 module cpu(
     input clk,
-    input clk_800k,
+    input clk_stb_800k,
     input rst,
     input [`WORD_WIDTH-1:0] instr,
     input [`WORD_WIDTH-1:0] data_in,
@@ -24,7 +24,7 @@ module cpu(
     wire [`NUM_REGS_WIDTH-1:0] rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     wire [`NUM_REGS_WIDTH-1:0] rd = instr[`NUM_REGS_WIDTH-1:0];
     wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
-    wire cpu_clk = debug_mode ? debug_clk : clk_800k;
+    // wire cpu_clk = ;
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J | op == `OP_JL;
@@ -60,16 +60,16 @@ module cpu(
     localparam STACK_BEGIN = 16'hF7FF;
 
     always @(posedge clk) begin
-        cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
+        // cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
             pc = 0;
             sp = STACK_BEGIN;
-            cpu_clk_vals = 2'b11;
+            // cpu_clk_vals = 2'b11;
             reg_file[0] = 0;
         end
 
         // posedge of cpu clk
-        else if (cpu_clk_vals[1] == 0 && cpu_clk_vals[0] == 1) begin
+        if (clk_stb_800k) begin
             lr = op == `OP_JL ? pc + 1 : lr;
             sp = op == `OP_PUSH ? sp - 1 :
                  (op == `OP_POP ? sp + 1 : sp);

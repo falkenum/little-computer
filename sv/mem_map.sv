@@ -8,13 +8,12 @@ module mem_map(
     input [31:0][15:0] dram_burst_buf,
     input uart_tx_ready,
     input dram_data_ready,
-    input cpu_ready,
+    input clk_stb_800k,
     input write_en,
     input vga_en,
     input [4:0] vga_x_group,
     input [8:0] vga_y_val,
     input clk,
-    input clk_800k,
     input rst,
     output dram_refresh_data,
     output [31:0][11:0] vga_bgr_buf,
@@ -75,7 +74,7 @@ module mem_map(
         case(state)
             STATE_IDLE:
                 // need to change state the tick after pc is updated
-                if (cpu_ready && clk_800k_vals == 3'b011) next_state_func = STATE_FETCH_INSTR;
+                if (clk_stb_800k) next_state_func = STATE_FETCH_INSTR;
                 else next_state_func = state;
             STATE_FETCH_INSTR:
                 next_state_func = STATE_WAIT;
@@ -102,7 +101,6 @@ module mem_map(
     always @(posedge clk) begin
         // reset start_n as on posedge of uart_tx_ready
         uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
-        if (cpu_ready) clk_800k_vals = {clk_800k_vals[1:0], clk_800k};
         if (uart_tx_ready_vals == 2'b01) begin
             // $display("resetting start_n");
             uart_tx_start_n = 1;
@@ -204,7 +202,6 @@ module mem_map(
                 dram_burst_en = 1;
                 dram_write_en = 0;
                 dram_addr = {6'b1, vga_y_val, vga_x_group, 5'b0};
-                // dram_addr = {6'b0, 9'b0, 5'h0, 5'h1F};
                 wait_count = 0;
             end
         endcase
