@@ -15,7 +15,7 @@ module mem_map(
     input [8:0] vga_y_val,
     input clk,
     input rst,
-    output dram_refresh_data,
+    output reg dram_refresh_data,
     output [31:0][11:0] vga_bgr_buf,
     output reg [24:0] dram_addr,
     output reg dram_write_en,
@@ -51,7 +51,6 @@ module mem_map(
     localparam STATE_DATA_OUT = 5;
     localparam STATE_FETCH_VGA = 6;
 
-    reg [`WORD_WIDTH-1:0] pc_r;
     reg [2:0] state;
     reg [5:0] wait_count;
     reg got_instr, got_data;
@@ -67,8 +66,6 @@ module mem_map(
             assign vga_bgr_buf[i] = dram_burst_buf[i][11:0];
         end
     endgenerate
-
-    assign dram_refresh_data = state == STATE_WAIT;
 
     function [2:0] next_state_func;
         input [2:0] state;
@@ -125,16 +122,15 @@ module mem_map(
             state <= next_state_func(state);
             case(state)
                 STATE_IDLE: begin
-                    // need to latch pc because it will change at the same time as leaving idle
-                    pc_r <= pc;
                 end 
                 STATE_FETCH_INSTR: begin
                     dram_burst_en <= 0;
                     dram_write_en <= 1'b0;
-                    if (pc_r >= DRAM_FIRST && pc_r <= DRAM_LAST) begin
-                        $display("fetch instr with %x at time %d", pc_r, $time);
+                    dram_refresh_data <= 1;
+                    if (pc >= DRAM_FIRST && pc <= DRAM_LAST) begin
+                        // $display("fetch instr with pc %x at time %d", pc, $time);
 
-                        dram_addr <= {9'b0, pc_r}; 
+                        dram_addr <= {9'b0, pc}; 
                     end else begin
                         dram_addr <= 25'b0; 
                     end
@@ -145,13 +141,15 @@ module mem_map(
                 STATE_WAIT: begin
                     // $display("wait at time %d", $time);
                     wait_count <= wait_count + 1;
+                    dram_refresh_data <= 0;
                 end
                 STATE_INSTR_OUT: begin
-                    $display("instr %x out at time %d", dram_read_data, $time);
+                    // $display("instr %x out at time %d", dram_read_data, $time);
                     instr <= dram_read_data;
                     got_instr <= 1;
                 end
                 STATE_RW_DATA: begin
+                    dram_refresh_data <= 1;
                     if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
                         dram_data_in <= data_in;
                         dram_addr <= {9'b0, data_addr}; 
@@ -206,6 +204,7 @@ module mem_map(
 
                 end
                 STATE_FETCH_VGA: begin
+                    dram_refresh_data <= 1;
                     dram_burst_en <= 1;
                     dram_write_en <= 0;
                     dram_addr <= {6'b1, vga_y_val, vga_x_group, 5'b0};

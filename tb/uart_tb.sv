@@ -92,7 +92,6 @@ module uart_tb();
         while (uart_tx_c.state !== uart_tx_c.STATE_IDLE) begin
             #BAUD_CYCLE;
         end
-        `ASSERT_EQ(word_ready, 1);
         `ASSERT_EQ(uart_word, 'hCDAB);
         $finish;
     end

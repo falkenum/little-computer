@@ -58,16 +58,16 @@ module little_computer(
 	inout 		    [35:0]		GPIO
 );
     localparam STATE_RESET = 0;
-    localparam STATE_RUNNING = 1;
+    localparam STATE_LOAD = 1;
+    localparam STATE_RUN = 2;
 
     // assign GPIO[7:0] = {instr[15:12], uart_byte_ready, uart_word_count[0], uart_tx, uart_rx};
 
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
-    reg [1:0] load_en_vals;
+    reg [7:0] load_en_vals;
     reg [1:0] key1_vals;
     reg [1:0] state;
-    reg internal_rst;
     reg [15:0] vga_pix_stb_cnt, stb_800k_cnt;
     reg vga_pix_stb, stb_800k;
 
@@ -77,7 +77,6 @@ module little_computer(
     wire debug_mode = SW[0];
     wire debug_clk = ~KEY[1];
     wire load_en = SW[1];
-    wire cpu_rst = sysrst & internal_rst;
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
         mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx,
@@ -105,7 +104,7 @@ module little_computer(
         .rval(VGA_R),
         .gval(VGA_G),
         .bval(VGA_B),
-        .enable(state == STATE_RUNNING),
+        .enable(state == STATE_RUN),
         .vblank(),     // high during blanking interval
         .mem_fetch_en(vga_mem_fetch_en),
         .mem_fetch_x_group(vga_x_group),
@@ -128,10 +127,10 @@ module little_computer(
 
         .rst(sysrst),
         .clk(sysclk),
-        .write_en(load_en ? 1'b1 : mem_map_dram_write_en),
-        .addr(load_en ? uart_word_count : mem_map_dram_addr),
-        .refresh_data(load_en ? uart_word_ready : mem_map_to_dram_refresh),
-        .data_in(load_en ? uart_word : mem_map_to_dram_data),
+        .write_en(state == STATE_LOAD ? 1'b1 : mem_map_dram_write_en),
+        .addr(state == STATE_LOAD ? uart_word_count : mem_map_dram_addr),
+        .refresh_data(state == STATE_LOAD ? uart_word_ready : mem_map_to_dram_refresh),
+        .data_in(state == STATE_LOAD ? uart_word : mem_map_to_dram_data),
         .burst_en(mem_map_dram_burst_en),
 
         .burst_buf(dram_ctl_burst_buf),
@@ -207,7 +206,7 @@ module little_computer(
     cpu cpu_c(
         .clk(sysclk),
         .clk_stb_800k(stb_800k),
-        .rst(cpu_rst),
+        .rst(sysrst),
         .instr(instr),
         .data_in(mem_map_lw_data),
         .debug_clk(debug_clk),
@@ -223,10 +222,14 @@ module little_computer(
         input [1:0] state;
         case(state)
             STATE_RESET:
-                if (dram_ready) next_state_func = STATE_RUNNING;
+                if (dram_ready) next_state_func = STATE_RUN;
                 else next_state_func = state;
-            STATE_RUNNING:
-                next_state_func = state;
+            STATE_LOAD:
+                if (load_en_vals == 8'b0) next_state_func = STATE_RUN;
+                else next_state_func = state;
+            STATE_RUN:
+                if (load_en_vals == 8'hFF) next_state_func = STATE_LOAD;
+                else next_state_func = state;
             default: next_state_func = STATE_RESET;
         endcase
         
@@ -240,41 +243,42 @@ module little_computer(
             state <= STATE_RESET;
             load_en_vals <= 2'b11;
             key1_vals <= 2'b11;
-            internal_rst <= 0;
             vga_pix_stb <= 0;
             stb_800k <= 0;
-            vga_pix_stb_cnt <= 'h8000;
-            stb_800k_cnt <= 'hFC00;
+            vga_pix_stb_cnt <= 'h0000;
+            stb_800k_cnt <= 'hF800;
         end
-        else state <= next_state_func(state);
+        else begin
+            state <= next_state_func(state);
+            case(state)
+                STATE_RESET: begin
+                end
+                STATE_LOAD: begin
+                end
+                STATE_RUN: begin
+                    // div by 2
+                    {vga_pix_stb, vga_pix_stb_cnt} <= vga_pix_stb_cnt + 16'h8000;
+                    // div by 64
+                    {stb_800k, stb_800k_cnt} <= stb_800k_cnt + 16'h0400;
+                end
+            endcase
 
-        case(state)
-            STATE_RESET: begin
-                internal_rst <= 0;
+
+
+            // inc counter on negedge of uart_word_ready, its value is used on the posedge by sdram
+            if (uart_word_ready_vals == 2'b10) begin
+                uart_word_count <= uart_word_count + 16'b1;
             end
-            STATE_RUNNING: begin
-                internal_rst <= 1;
-                // div by 2
-                {vga_pix_stb, vga_pix_stb_cnt} <= vga_pix_stb_cnt + 16'h8000;
-                // div by 64
-                {stb_800k, stb_800k_cnt} <= stb_800k_cnt + 16'h0400;
+            uart_word_ready_vals <= {uart_word_ready_vals[0], uart_word_ready};
+
+            // reset word count on positive edge of load en
+            if (load_en_vals == 'h7F) begin
+                uart_word_count <= 0;
             end
-        endcase
 
-
-
-        // inc counter on negedge of uart_word_ready, its value is used on the posedge by sdram
-        if (uart_word_ready_vals == 2'b10) begin
-            uart_word_count <= uart_word_ready_vals + 16'b1;
-        end
-        uart_word_ready_vals <= {uart_word_ready_vals[0], uart_word_ready};
-
-        // reset word count on positive edge of load en
-        if (load_en_vals == 2'b01) begin
-            uart_word_count <= 0;
+            load_en_vals <= {load_en_vals[6:0], load_en};
         end
 
-        load_en_vals <= {load_en_vals[0], load_en};
     end
 
 endmodule

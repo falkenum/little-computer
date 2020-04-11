@@ -63,28 +63,30 @@ module cpu(
         // cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
             // first clk strobe will change the pc to 0
-            // because the reset instr should be 'hFFFF, or a nop instr
-            pc = 16'h0;
-            sp = STACK_BEGIN;
-            // cpu_clk_vals = 2'b11;
-            reg_file[0] = 0;
+            pc <= 16'hFFFF;
+            sp <= STACK_BEGIN;
+            // cpu_clk_vals <= 2'b11;
+            reg_file[0] <= 0;
         end
 
         // posedge of cpu clk
-        if (clk_stb_800k) begin
+        else if (clk_stb_800k) begin
             // $display("pc changed at time ", $time);
-            lr = op == `OP_JL ? pc + 1 : lr;
-            sp = op == `OP_PUSH ? sp - 1 :
+            lr <= op == `OP_JL ? pc + 1 : lr;
+            sp <= op == `OP_PUSH ? sp - 1 :
                  (op == `OP_POP ? sp + 1 : sp);
 
-            pc = halted ? pc : 
+            // $display("cpu is halted: %b", halted);
+            pc <= pc == 'hFFFF ? 0 : 
+                (halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : 
-                (op == `OP_RTS ? lr : pc + 1)));
+                (op == `OP_RTS ? lr : pc + 1))));
+            // $display("pc is now: %x", pc);
             if (reg_write_en) begin
                 // $display("rs_val: %x, rt_val: %x, rs: %x, rt: %x", rs_val, rt_val, rs, rt);
                 // $display("writing value %x to register %x", reg_in, rd);
-                reg_file[rd] = reg_in;
+                reg_file[rd] <= reg_in;
             end
         end
     end

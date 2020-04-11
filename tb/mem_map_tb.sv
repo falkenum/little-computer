@@ -147,12 +147,9 @@ module mem_map_tb;
         rst = 1; #SYS_CYCLE;
         while (sdram_ctl_c.mem_ready !== 1) #SYS_CYCLE;
         `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
-        $display("begin at time ", $time);
         #CPU_CYCLE;
-        $display("end at time ", $time);
         `ASSERT_EQ(mem_map_c.instr, 'h0009);
         `ASSERT_EQ(data_out, 'h0049);
-        $finish;
 
         pc = 3;
         write_en = 0;

@@ -69,7 +69,7 @@ module lc_hello_tb;
 
         rst = 1; #SYS_CYCLE;
 
-        while (lc_c.state != lc_c.STATE_RUNNING) begin
+        while (lc_c.state != lc_c.STATE_RUN) begin
             #SYS_CYCLE;
         end
     endtask

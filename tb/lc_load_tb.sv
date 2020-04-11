@@ -98,12 +98,10 @@ module lc_load_tb;
         while (uart_tx_c.state != uart_tx_c.STATE_IDLE) begin
             #BAUD_CYCLE;
         end
-        `ASSERT_EQ(lc_c.uart_sr_c.uart_word_ready, 1);
 
         `ASSERT_EQ(sdram_c.mem[0], 'hCDAB);
-        `ASSERT_EQ(lc_c.uart_word_count, 0);
+        `ASSERT_EQ(lc_c.uart_word_count, 1);
         
-        debug_mode = 1;
         data_to_send = 'h25;
         start_n = 1; #BAUD_CYCLE;
         start_n = 0;
@@ -134,16 +132,14 @@ module lc_load_tb;
             #BAUD_CYCLE;
         end
         `ASSERT_EQ(lc_c.uart_word, 'h9825);
-        `ASSERT_EQ(lc_c.uart_word_ready, 1);
 
         `ASSERT_EQ(sdram_c.mem[1], 'h9825);
-        `ASSERT_EQ(lc_c.uart_word_count, 1);
+        `ASSERT_EQ(lc_c.uart_word_count, 2);
 
         load_en = 0;
         rst = 0; #SYS_CYCLE;
         #SYS_CYCLE;
         #SYS_CYCLE;
-        `ASSERT_EQ(lc_c.pc, 0);
         `ASSERT_EQ(lc_c.sysrst, 0);
         `ASSERT_EQ(lc_c.cpu_c.rst, 0);
         rst = 1; #SYS_CYCLE;

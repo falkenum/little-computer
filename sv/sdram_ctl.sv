@@ -97,7 +97,7 @@ module sdram_ctl(
                 next_state_func = STATE_POST_READ;
             end
             STATE_POST_READ: begin
-                // CAS latency is 2, 
+                // CAS latency is 2
                 if ((~burst_en && wait_count == 1) ||
                  (burst_en && wait_count == 32)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
@@ -145,7 +145,7 @@ module sdram_ctl(
                 STATE_RST_MODE_WRITE: begin
                     cmd <= CMD_MRS;
                     dram_ba <= 2'b00;
-                    // CAS latency <= 2, burst length is page length, single write
+                    // CAS latency = 2, burst length is page length, single write
                     dram_addr[12:0] <= {3'b000, 1'b1, 2'b0, 3'b010, 1'b0, 3'b111};
                     wait_count <= 0;
                 end
@@ -155,19 +155,21 @@ module sdram_ctl(
                     data_ready <= 0;
                 end
                 STATE_ACTIVATE: begin
-                    $display("ctl activated at time %d for addr %x", $time, addr);
+                    // $display("ctl activated at time %d for addr %x", $time, addr);
                     drive_val <= 0;
 
                     cmd <= CMD_ACT;
                     {dram_ba, dram_addr} <= addr[24:10];
                 end
                 STATE_WRITE: begin
+                    // $display("ctl writing at time %d for addr %x", $time, addr);
                     cmd <= CMD_WRITE;
                     dq_val <= data_in;
                     {dram_ba, dram_addr[10:0]} <= {addr[24:23], 1'b0, addr[9:0]};
                     drive_val <= 1;
                 end
                 STATE_READ: begin
+                    // $display("ctl reading at time %d for addr %x", $time, addr);
                     cmd <= CMD_READ;
                     {dram_ba, dram_addr[10:0]} <= {addr[24:23], 1'b0, addr[9:0]};
                     wait_count <= 0;
