@@ -56,10 +56,7 @@ module sdram_ctl(
 	reg [31:0] wait_count;
     reg [STATE_WIDTH-1:0] state;
     reg [2:0] cmd;
-    reg [15:0] data_in_r, dq_val;
-    reg [24:0] addr_r;
-    reg write_en_r;
-    reg [5:0] post_read_count;
+    reg [15:0] dq_val;
     reg drive_val;
 
     assign dram_cke = 1;
@@ -87,12 +84,11 @@ module sdram_ctl(
                 next_state_func = STATE_IDLE;
             STATE_IDLE:
                 if (refresh_data) begin
-                    // $display($time, " is the current time state change");
                     next_state_func = STATE_ACTIVATE;
                 end
                 else next_state_func = state;
             STATE_ACTIVATE:
-                if (write_en_r) next_state_func = STATE_WRITE;
+                if (write_en) next_state_func = STATE_WRITE;
                 else next_state_func = STATE_READ;
             STATE_WRITE: begin
                 next_state_func = STATE_PRECHARGE;
@@ -102,10 +98,9 @@ module sdram_ctl(
             end
             STATE_POST_READ: begin
                 // CAS latency is 2, 
-                if ((~burst_en && post_read_count == 3) ||
-                 (burst_en && post_read_count == 34)) next_state_func = STATE_BURST_STOP;
+                if ((~burst_en && wait_count == 1) ||
+                 (burst_en && wait_count == 32)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
-                // $display("burst en: %b, read count: %d", burst_en, post_read_count);
             end
             STATE_BURST_STOP: begin
                 next_state_func = STATE_PRECHARGE;
@@ -121,89 +116,85 @@ module sdram_ctl(
 
     always @(posedge clk) begin
 		if (~rst) begin
-			wait_count = 0;
-            state = STATE_RST_NOP;
-            dq_val = 16'bZ;
-            data_out = 0;
-            data_ready = 0;
-            write_en_r = 0;
-            addr_r = 0;
-            mem_ready = 0;
-            post_read_count = 0;
-            drive_val = 0;
+			wait_count <= 0;
+            state <= STATE_RST_NOP;
+            dq_val <= 16'bZ;
+            data_out <= 0;
+            data_ready <= 0;
+            mem_ready <= 0;
+            drive_val <= 0;
 		end
-        else state = next_state_func(state);
-        wait_count += 1;
+        else begin
+            state <= next_state_func(state);
+            case(state)
+                STATE_RST_NOP: begin
+                    wait_count <= wait_count + 1;
+                    cmd <= CMD_NOP;
+                end
+                STATE_RST_PRECHARGE: begin
+                    cmd <= CMD_PRE;
 
-        case(state)
-            STATE_RST_NOP: begin
-                cmd = CMD_NOP;
-            end
-            STATE_RST_PRECHARGE: begin
-                cmd = CMD_PRE;
+                    // precharge all banks
+                    dram_addr[10] <= 1;
+                    wait_count <= 0;
+                end
+                STATE_RST_AUTO_REFRESH: begin
+                    wait_count <= wait_count + 1;
+                    cmd <= CMD_REF;
+                end
+                STATE_RST_MODE_WRITE: begin
+                    cmd <= CMD_MRS;
+                    dram_ba <= 2'b00;
+                    // CAS latency <= 2, burst length is page length, single write
+                    dram_addr[12:0] <= {3'b000, 1'b1, 2'b0, 3'b010, 1'b0, 3'b111};
+                    wait_count <= 0;
+                end
+                STATE_IDLE: begin
+                    cmd <= CMD_NOP;
+                    mem_ready <= 1;
+                    data_ready <= 0;
+                end
+                STATE_ACTIVATE: begin
+                    $display("ctl activated at time %d for addr %x", $time, addr);
+                    drive_val <= 0;
 
-                // precharge all banks
-                dram_addr[10] = 1;
-                wait_count = 0;
-            end
-            STATE_RST_AUTO_REFRESH: begin
-                cmd = CMD_REF;
-            end
-            STATE_RST_MODE_WRITE: begin
-                cmd = CMD_MRS;
-                dram_ba = 2'b00;
-                // CAS latency = 2, burst length is page length, single write
-                dram_addr[12:0] = {3'b000, 1'b1, 2'b0, 3'b010, 1'b0, 3'b111};
-                wait_count = 0;
-            end
-            STATE_IDLE: begin
-                cmd = CMD_NOP;
-                mem_ready = 1;
-                data_ready = 1;
-                post_read_count = 0;
-            end
-            STATE_ACTIVATE: begin
-                write_en_r = write_en;
-                addr_r = addr;
-                data_in_r = data_in;
-                data_ready = 0;
-                drive_val = 0;
+                    cmd <= CMD_ACT;
+                    {dram_ba, dram_addr} <= addr[24:10];
+                end
+                STATE_WRITE: begin
+                    cmd <= CMD_WRITE;
+                    dq_val <= data_in;
+                    {dram_ba, dram_addr[10:0]} <= {addr[24:23], 1'b0, addr[9:0]};
+                    drive_val <= 1;
+                end
+                STATE_READ: begin
+                    cmd <= CMD_READ;
+                    {dram_ba, dram_addr[10:0]} <= {addr[24:23], 1'b0, addr[9:0]};
+                    wait_count <= 0;
+                end
+                STATE_POST_READ: begin
+                    cmd <= CMD_NOP;
+                    wait_count <= wait_count + 1;
+                    if (wait_count >= 1) begin
 
-                cmd = CMD_ACT;
-                {dram_ba, dram_addr} = addr_r[24:10];
-            end
-            STATE_WRITE: begin
-                cmd = CMD_WRITE;
-                dq_val = data_in_r;
-                {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
-                drive_val = 1;
-            end
-            STATE_READ: begin
-                cmd = CMD_READ;
-                {dram_ba, dram_addr[10:0]} = {addr_r[24:23], 1'b0, addr_r[9:0]};
-                wait_count = 0;
-            end
-            STATE_POST_READ: begin
-                cmd = CMD_NOP;
-                post_read_count += 1;
-                if (post_read_count >= 3) begin
-
-                    if (~burst_en) data_out = dram_dq;
-                    else begin
-                        burst_buf[post_read_count - 3] = dram_dq;
+                        if (~burst_en) data_out <= dram_dq;
+                        else begin
+                            burst_buf[wait_count - 1] <= dram_dq;
+                        end
                     end
+
+                end
+                STATE_BURST_STOP: begin
+                    cmd <= CMD_BST;
+                end
+                STATE_PRECHARGE: begin
+                    data_ready <= 1;
+                    cmd <= CMD_PRE;
                 end
 
-            end
-            STATE_BURST_STOP: begin
-                data_ready = 1;
-                cmd = CMD_BST;
-            end
-            STATE_PRECHARGE: begin
-                cmd = CMD_PRE;
-            end
+            endcase
+        end
 
-        endcase
 
     end
 endmodule

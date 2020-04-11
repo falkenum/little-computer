@@ -135,9 +135,6 @@ module lc_load_tb;
         end
         `ASSERT_EQ(lc_c.uart_word, 'h9825);
         `ASSERT_EQ(lc_c.uart_word_ready, 1);
-        `ASSERT_EQ(lc_c.sdram_ctl_c.data_in_r, 'h9825);
-        `ASSERT_EQ(lc_c.sdram_ctl_c.addr_r, 'h1);
-        `ASSERT_EQ(lc_c.sdram_ctl_c.addr_r, 'h1);
 
         `ASSERT_EQ(sdram_c.mem[1], 'h9825);
         `ASSERT_EQ(lc_c.uart_word_count, 1);

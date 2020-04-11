@@ -47,7 +47,7 @@ module sdram_sim(
             STATE_CMD_WRITE:
                 next_state_func = STATE_IDLE;
             STATE_CMD_READ:
-                if ((state_read_count >= 3 && cmd == CMD_BST) || state_read_count == 66) next_state_func = STATE_IDLE;
+                if ((state_read_count >= 1 && cmd == CMD_BST) || state_read_count == 66) next_state_func = STATE_IDLE;
                 else next_state_func = state;
             default: next_state_func = STATE_IDLE;
         endcase
@@ -61,8 +61,8 @@ module sdram_sim(
                 state_read_count = 0;
             end
             STATE_ACTIVATED: begin
-                drive_val = 0;
                 rw_addr[24:10] = {ba, addr};
+                drive_val = 0;
                 // $display("dram_addr during activate: %x", addr);
             end
             STATE_CMD_WRITE: begin
@@ -73,10 +73,9 @@ module sdram_sim(
             end
             STATE_CMD_READ: begin
                 rw_addr[9:0] = addr[9:0];
-
-                state_read_count += 1;
-                if (state_read_count >= 3) begin
-                    dq_val = mem[rw_addr + state_read_count - 3];
+                state_read_count = state_read_count + 1;
+                if (state_read_count >= 1) begin
+                    dq_val = mem[rw_addr + state_read_count - 2];
                     drive_val = 1;
                 end
             end

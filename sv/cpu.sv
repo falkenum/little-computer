@@ -62,7 +62,9 @@ module cpu(
     always @(posedge clk) begin
         // cpu_clk_vals = {cpu_clk_vals[0], cpu_clk};
         if (~rst) begin 
-            pc = 0;
+            // first clk strobe will change the pc to 0
+            // because the reset instr should be 'hFFFF, or a nop instr
+            pc = 16'h0;
             sp = STACK_BEGIN;
             // cpu_clk_vals = 2'b11;
             reg_file[0] = 0;
@@ -70,6 +72,7 @@ module cpu(
 
         // posedge of cpu clk
         if (clk_stb_800k) begin
+            // $display("pc changed at time ", $time);
             lr = op == `OP_JL ? pc + 1 : lr;
             sp = op == `OP_PUSH ? sp - 1 :
                  (op == `OP_POP ? sp + 1 : sp);

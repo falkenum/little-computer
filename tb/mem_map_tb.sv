@@ -3,7 +3,7 @@
 `timescale 1 ns / 1 ps 
 
 module mem_map_tb;
-    reg clk = 0, clk_800k = 0;
+    reg clk = 0, clk_stb_800k = 0;
     reg rst = 1;
 
     // temp vars
@@ -81,7 +81,7 @@ module mem_map_tb;
 
     mem_map mem_map_c(
         .clk(clk),
-        .clk_800k(clk_800k),
+        .clk_stb_800k(clk_stb_800k),
         .rst(rst),
 
         .dram_read_data(dram_ctl_data_out),
@@ -92,7 +92,6 @@ module mem_map_tb;
         .dram_burst_en(dram_ctl_burst_en),
         .dram_data_in(dram_ctl_data_in),
         .dram_burst_buf(dram_ctl_burst_buf),
-        .cpu_ready(dram_ctl_ready),
         .uart_tx_ready(1'b0),
 
         //inputs
@@ -110,33 +109,31 @@ module mem_map_tb;
         .vga_bgr_buf(vga_bgr_buf)
     );
 
+    reg [15:0] clk_stb_800k_cnt = 'hFC00;
+    always @(posedge clk) begin
+        if (sdram_ctl_c.mem_ready) begin
+            {clk_stb_800k, clk_stb_800k_cnt} <= clk_stb_800k_cnt + 16'h0400;
+        end
+    end
+
     initial begin
         forever begin
-            clk_800k = 1;
-            repeat (32) begin
-                clk = 1; #10;
-                clk = 0; #10;
-            end
-            clk_800k = 0;
-            repeat (32) begin
-                clk = 1; #10;
-                clk = 0; #10;
-            end
+            clk = 1; #10;
+            clk = 0; #10;
         end
     end
 
     localparam SYS_CYCLE = 20;
     localparam CPU_CYCLE = 64*SYS_CYCLE;
     initial begin
-        rst = 0; #SYS_CYCLE;
-        rst = 1;
-        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
-        `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
-        while(!sdram_ctl_c.mem_ready) #SYS_CYCLE;
-        while(mem_map_c.state != mem_map_c.STATE_IDLE) #SYS_CYCLE;
-        // while (clk_800k) #SYS_CYCLE;
+        // rst = 0; #SYS_CYCLE;
+        // rst = 1;
+        // `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
+        // `ASSERT_EQ(mem_map_c.dram_data_ready, 0);
+        // while(!sdram_ctl_c.mem_ready) #SYS_CYCLE;
+        // while(mem_map_c.state != mem_map_c.STATE_IDLE) #SYS_CYCLE;
 
-        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
+        // `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_IDLE);
 
         pc = 1;
         write_en = 0;
@@ -148,11 +145,14 @@ module mem_map_tb;
         $readmemh("s/add.mem", sdram_c.mem, 0, 5);
         rst = 0; #SYS_CYCLE;
         rst = 1; #SYS_CYCLE;
-        while (sdram_ctl_c.mem_ready === 0) #SYS_CYCLE;
-        while (!clk_800k) #SYS_CYCLE;
+        while (sdram_ctl_c.mem_ready !== 1) #SYS_CYCLE;
+        `ASSERT_EQ(mem_map_c.state, mem_map_c.STATE_IDLE);
+        $display("begin at time ", $time);
         #CPU_CYCLE;
+        $display("end at time ", $time);
         `ASSERT_EQ(mem_map_c.instr, 'h0009);
         `ASSERT_EQ(data_out, 'h0049);
+        $finish;
 
         pc = 3;
         write_en = 0;
@@ -214,9 +214,14 @@ module mem_map_tb;
             temp_color_comp += 1;
         end
 
-        `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd32}], 12'h000);
-        `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd33}], 12'h111);
-        `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd34}], 12'h222);
+        temp_x = 0;
+        temp_color_comp = 0;
+        while (temp_x < 32) begin
+            `ASSERT_EQ(sdram_c.mem[{6'h1, 9'd7, 10'd32} + temp_x], {3{temp_color_comp}});
+            // $display("%x", sdram_c.mem[{6'h1, 9'd7, 10'd32} + temp_x]);
+            temp_x += 1;
+            temp_color_comp += 1;
+        end
 
         pc = 0;
         vga_en = 1;
@@ -224,18 +229,28 @@ module mem_map_tb;
         vga_x_group = 1;
         vga_y_val = 7;
 
-        while(clk_800k) #SYS_CYCLE;
-        while(!clk_800k) #SYS_CYCLE;
-        #SYS_CYCLE;
-        while (mem_map_c.state !== mem_map_c.STATE_IDLE) begin
+
+        while (!clk_stb_800k) #(SYS_CYCLE >> 1);
+        cycle_count = 0;
+        while (mem_map_c.state != mem_map_c.STATE_FETCH_VGA) begin
             #SYS_CYCLE;
+            cycle_count += 1;
         end
+        #(SYS_CYCLE*5);
+        cycle_count += 5;
+        `ASSERT_EQ(sdram_ctl_c.state, sdram_ctl_c.STATE_POST_READ);
+
+        while (mem_map_c.state != mem_map_c.STATE_IDLE) begin
+            #SYS_CYCLE;
+            cycle_count += 1;
+        end
+        // $display(cycle_count);
 
         temp_x = 0;
         temp_color_comp = 0;
         while (temp_x < 32) begin
             `ASSERT_EQ(vga_bgr_buf[temp_x], {3{temp_color_comp}});
-            // $display(vga_bgr_buf[temp_x]);
+            // $display("%x", sdram_ctl_c.burst_buf[temp_x]);
             temp_x += 1;
             temp_color_comp += 1;
         end

@@ -235,29 +235,29 @@ module little_computer(
     always @(posedge sysclk) begin
 
         if (~sysrst) begin
-            uart_word_count = 0;
-            uart_word_ready_vals = 2'b00;
-            state = STATE_RESET;
-            load_en_vals = 2'b11;
-            key1_vals = 2'b11;
-            internal_rst = 0;
-            vga_pix_stb = 0;
-            stb_800k = 0;
-            vga_pix_stb_cnt = 0;
-            stb_800k_cnt = 0;
+            uart_word_count <= 0;
+            uart_word_ready_vals <= 2'b00;
+            state <= STATE_RESET;
+            load_en_vals <= 2'b11;
+            key1_vals <= 2'b11;
+            internal_rst <= 0;
+            vga_pix_stb <= 0;
+            stb_800k <= 0;
+            vga_pix_stb_cnt <= 'h8000;
+            stb_800k_cnt <= 'hFC00;
         end
-        else state = next_state_func(state);
+        else state <= next_state_func(state);
 
         case(state)
             STATE_RESET: begin
-                internal_rst = 0;
+                internal_rst <= 0;
             end
             STATE_RUNNING: begin
-                internal_rst = 1;
+                internal_rst <= 1;
                 // div by 2
-                {vga_pix_stb, vga_pix_stb_cnt} = vga_pix_stb_cnt + 16'h8000;
+                {vga_pix_stb, vga_pix_stb_cnt} <= vga_pix_stb_cnt + 16'h8000;
                 // div by 64
-                {stb_800k, stb_800k_cnt} = stb_800k_cnt + 16'h0400;
+                {stb_800k, stb_800k_cnt} <= stb_800k_cnt + 16'h0400;
             end
         endcase
 
@@ -265,16 +265,16 @@ module little_computer(
 
         // inc counter on negedge of uart_word_ready, its value is used on the posedge by sdram
         if (uart_word_ready_vals == 2'b10) begin
-            uart_word_count += 16'b1;
+            uart_word_count <= uart_word_ready_vals + 16'b1;
         end
-        uart_word_ready_vals = {uart_word_ready_vals[0], uart_word_ready};
+        uart_word_ready_vals <= {uart_word_ready_vals[0], uart_word_ready};
 
         // reset word count on positive edge of load en
         if (load_en_vals == 2'b01) begin
-            uart_word_count = 0;
+            uart_word_count <= 0;
         end
 
-        load_en_vals = {load_en_vals[0], load_en};
+        load_en_vals <= {load_en_vals[0], load_en};
     end
 
 endmodule

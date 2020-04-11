@@ -51,6 +51,7 @@ module mem_map(
     localparam STATE_DATA_OUT = 5;
     localparam STATE_FETCH_VGA = 6;
 
+    reg [`WORD_WIDTH-1:0] pc_r;
     reg [2:0] state;
     reg [5:0] wait_count;
     reg got_instr, got_data;
@@ -67,7 +68,7 @@ module mem_map(
         end
     endgenerate
 
-    assign dram_refresh_data = state == STATE_FETCH_INSTR || state == STATE_RW_DATA || state == STATE_FETCH_VGA;
+    assign dram_refresh_data = state == STATE_WAIT;
 
     function [2:0] next_state_func;
         input [2:0] state;
@@ -100,110 +101,118 @@ module mem_map(
 
     always @(posedge clk) begin
         // reset start_n as on posedge of uart_tx_ready
-        uart_tx_ready_vals = {uart_tx_ready_vals[0], uart_tx_ready};
+        uart_tx_ready_vals <= {uart_tx_ready_vals[0], uart_tx_ready};
         if (uart_tx_ready_vals == 2'b01) begin
             // $display("resetting start_n");
-            uart_tx_start_n = 1;
+            uart_tx_start_n <= 1;
         end
 
         if (~rst) begin
-            state = STATE_IDLE;
-            clk_800k_vals = 3'b00;
-            wait_count = 0;
-            got_instr = 0;
-            got_data = 0;
-            uart_tx_start_n = 1;
-            uart_tx_ready_vals = 2'b11;
-            vga_write_state = VGA_WRITE_STATE_X;
-            dram_burst_en = 1'b0;
-            led = 10'b0;
-            instr = 'hFFFF;
+            state <= STATE_IDLE;
+            clk_800k_vals <= 3'b00;
+            wait_count <= 0;
+            got_instr <= 0;
+            got_data <= 0;
+            uart_tx_start_n <= 1;
+            uart_tx_ready_vals <= 2'b11;
+            vga_write_state <= VGA_WRITE_STATE_X;
+            dram_burst_en <= 1'b0;
+            led <= 10'b0;
+            instr <= 'hFFFF;
         end
 
-        else state = next_state_func(state);
+        else begin
+            state <= next_state_func(state);
+            case(state)
+                STATE_IDLE: begin
+                    // need to latch pc because it will change at the same time as leaving idle
+                    pc_r <= pc;
+                end 
+                STATE_FETCH_INSTR: begin
+                    dram_burst_en <= 0;
+                    dram_write_en <= 1'b0;
+                    if (pc_r >= DRAM_FIRST && pc_r <= DRAM_LAST) begin
+                        $display("fetch instr with %x at time %d", pc_r, $time);
 
-        case(state)
-            STATE_IDLE: begin
-            end 
-            STATE_FETCH_INSTR: begin
-                dram_burst_en = 0;
-                dram_write_en = 1'b0;
-                if (pc >= DRAM_FIRST && pc <= DRAM_LAST) begin
-                    dram_addr = {9'b0, pc}; 
-                end else begin
-                    dram_addr = 25'b0; 
+                        dram_addr <= {9'b0, pc_r}; 
+                    end else begin
+                        dram_addr <= 25'b0; 
+                    end
+                    wait_count <= 0;
+                    got_instr <= 0;
+                    got_data <= 0;
                 end
-                wait_count = 0;
-                got_instr = 0;
-                got_data = 0;
-            end
-            STATE_WAIT: begin
-                wait_count += 1;
-            end
-            STATE_INSTR_OUT: begin
-                instr = dram_read_data;
-                got_instr = 1;
-            end
-            STATE_RW_DATA: begin
-                if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
-                    dram_data_in = data_in;
-                    dram_addr = {9'b0, data_addr}; 
-                    dram_write_en = write_en;
-                end else begin
-                    dram_addr = 25'b0; 
-                    dram_write_en = 1'b0;
+                STATE_WAIT: begin
+                    // $display("wait at time %d", $time);
+                    wait_count <= wait_count + 1;
                 end
+                STATE_INSTR_OUT: begin
+                    $display("instr %x out at time %d", dram_read_data, $time);
+                    instr <= dram_read_data;
+                    got_instr <= 1;
+                end
+                STATE_RW_DATA: begin
+                    if (data_addr >= DRAM_FIRST && data_addr <= DRAM_LAST) begin
+                        dram_data_in <= data_in;
+                        dram_addr <= {9'b0, data_addr}; 
+                        dram_write_en <= write_en;
+                    end else begin
+                        dram_addr <= 25'b0; 
+                        dram_write_en <= 1'b0;
+                    end
 
-                if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
-                    led[data_addr - LED_FIRST] = data_in[0];
-                end
+                    if (write_en && data_addr >= LED_FIRST && data_addr <= LED_LAST) begin
+                        led[data_addr - LED_FIRST] <= data_in[0];
+                    end
 
-                if (write_en && data_addr == UART_TX_BYTE) begin
-                    
-                    // $display("writing tx byte %x", data_in[7:0]);
-                    uart_tx_byte = data_in[7:0];
-                    uart_tx_start_n = 0;
-                end
+                    if (write_en && data_addr == UART_TX_BYTE) begin
+                        
+                        // $display("writing tx byte %x", data_in[7:0]);
+                        uart_tx_byte <= data_in[7:0];
+                        uart_tx_start_n <= 0;
+                    end
 
-                if (write_en && data_addr == VGA_WRITE) begin
-                    case(vga_write_state)
-                        VGA_WRITE_STATE_X: begin
-                            vga_x_in = data_in[9:0];
-                            vga_write_state = VGA_WRITE_STATE_Y;
-                        end
-                        VGA_WRITE_STATE_Y: begin
-                            vga_y_in = data_in[8:0];
-                            vga_write_state = VGA_WRITE_STATE_BGR;
-                        end
-                        VGA_WRITE_STATE_BGR: begin
-                            // pixels start at address 'h80000
-                            dram_addr = {6'b1, vga_y_in, vga_x_in};
-                            dram_write_en = 1'b1;
-                            dram_data_in = data_in;
-                            vga_write_state = VGA_WRITE_STATE_X;
-                        end
-                        default: vga_write_state = VGA_WRITE_STATE_X;
-                    endcase
-                end
+                    if (write_en && data_addr == VGA_WRITE) begin
+                        case(vga_write_state)
+                            VGA_WRITE_STATE_X: begin
+                                vga_x_in <= data_in[9:0];
+                                vga_write_state <= VGA_WRITE_STATE_Y;
+                            end
+                            VGA_WRITE_STATE_Y: begin
+                                vga_y_in <= data_in[8:0];
+                                vga_write_state <= VGA_WRITE_STATE_BGR;
+                            end
+                            VGA_WRITE_STATE_BGR: begin
+                                // pixels start at address 'h80000
+                                dram_addr <= {6'b1, vga_y_in, vga_x_in};
+                                dram_write_en <= 1'b1;
+                                dram_data_in <= data_in;
+                                vga_write_state <= VGA_WRITE_STATE_X;
+                            end
+                            default: vga_write_state <= VGA_WRITE_STATE_X;
+                        endcase
+                    end
 
-                wait_count = 0;
-            end
-            STATE_DATA_OUT: begin
-                got_data = 1;
-                if (data_addr == UART_TX_READY) begin   
-                    read_data = uart_tx_ready ? 16'b1 : 16'b0;
+                    wait_count <= 0;
                 end
-                else begin
-                    read_data = dram_read_data;
-                end
+                STATE_DATA_OUT: begin
+                    got_data <= 1;
+                    if (data_addr == UART_TX_READY) begin   
+                        read_data <= uart_tx_ready ? 16'b1 : 16'b0;
+                    end
+                    else begin
+                        read_data <= dram_read_data;
+                    end
 
-            end
-            STATE_FETCH_VGA: begin
-                dram_burst_en = 1;
-                dram_write_en = 0;
-                dram_addr = {6'b1, vga_y_val, vga_x_group, 5'b0};
-                wait_count = 0;
-            end
-        endcase
+                end
+                STATE_FETCH_VGA: begin
+                    dram_burst_en <= 1;
+                    dram_write_en <= 0;
+                    dram_addr <= {6'b1, vga_y_val, vga_x_group, 5'b0};
+                    wait_count <= 0;
+                end
+            endcase
+        end
+
     end
 endmodule

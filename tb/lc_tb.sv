@@ -61,11 +61,13 @@ module lc_tb;
 
         load_instr("s/halt.mem", 1);
         `ASSERT_EQ(lc_c.dram_ready, 1);
-        `ASSERT_EQ(lc_c.pc, 0);
 
+        // $display("begin at time ", $time);
         #CPU_CYCLE;
         
         `ASSERT_EQ(lc_c.instr, 'he000);
+        // $display("assertion at time ", $time);
+        $display("%x", lc_c.instr);
 
         #CPU_CYCLE;
         `ASSERT_EQ(lc_c.pc, 0);
@@ -78,39 +80,19 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.halted, 1);
 
         load_instr("s/add.mem", 6);
-        `ASSERT_EQ(lc_c.pc, 0);
 
-        #(SYS_CYCLE*63);
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        #(SYS_CYCLE);
-        `ASSERT_EQ(lc_c.instr, 'h4041);
-        `ASSERT_EQ(lc_c.pc, 1);
+        $display("mem map state is %d at time %d", lc_c.mem_map_c.state, $time);
         #CPU_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // #SYS_CYCLE;
-        // $display(lc_c.mem_map_c.state);
-        // $display("%x", lc_c.pc);
-        // $display("%x", lc_c.instr);
-        `ASSERT_EQ(lc_c.pc, 2);
+        `ASSERT_EQ(lc_c.instr, 'h4041);
+        `ASSERT_EQ(lc_c.pc, 0);
+        $display("mem map state is %d at time %d", lc_c.mem_map_c.state, $time);
+        #SYS_CYCLE;
+        #CPU_CYCLE;
+        $display("mem map state is %d at time %d", lc_c.mem_map_c.state, $time);
         `ASSERT_EQ(lc_c.instr, 'h0009);
-        // $display("%x", lc_c.instr);
+        $display("%x", lc_c.instr);
+        $finish;
+        `ASSERT_EQ(lc_c.pc, 1);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 1);
         #CPU_CYCLE;
