@@ -54,7 +54,6 @@ module sdram_sim(
     endfunction
 
     always @(posedge clk) begin
-        #1;
         state = next_state_func(state);
         case(state)
             STATE_IDLE: begin
@@ -74,7 +73,7 @@ module sdram_sim(
             STATE_CMD_READ: begin
                 rw_addr[9:0] = addr[9:0];
                 state_read_count = state_read_count + 1;
-                if (state_read_count >= 1) begin
+                if (state_read_count >= 2) begin
                     dq_val = mem[rw_addr + state_read_count - 2];
                     drive_val = 1;
                 end

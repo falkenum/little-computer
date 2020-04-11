@@ -98,8 +98,8 @@ module sdram_ctl(
             end
             STATE_POST_READ: begin
                 // CAS latency is 2
-                if ((~burst_en && wait_count == 1) ||
-                 (burst_en && wait_count == 32)) next_state_func = STATE_BURST_STOP;
+                if ((~burst_en && wait_count == 2) ||
+                 (burst_en && wait_count == 33)) next_state_func = STATE_BURST_STOP;
                 else next_state_func = state;
             end
             STATE_BURST_STOP: begin
@@ -177,11 +177,11 @@ module sdram_ctl(
                 STATE_POST_READ: begin
                     cmd <= CMD_NOP;
                     wait_count <= wait_count + 1;
-                    if (wait_count >= 1) begin
+                    if (wait_count >= 2) begin
 
                         if (~burst_en) data_out <= dram_dq;
                         else begin
-                            burst_buf[wait_count - 1] <= dram_dq;
+                            burst_buf[wait_count - 2] <= dram_dq;
                         end
                     end
 

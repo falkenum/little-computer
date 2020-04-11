@@ -260,6 +260,7 @@ module little_computer(
                     {vga_pix_stb, vga_pix_stb_cnt} <= vga_pix_stb_cnt + 16'h8000;
                     // div by 64
                     {stb_800k, stb_800k_cnt} <= stb_800k_cnt + 16'h0400;
+                    // if (vga_pix_stb && stb_800k) $display("test at time ", $time);
                 end
             endcase
 

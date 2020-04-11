@@ -39,9 +39,9 @@ module vga(
     // assign mem_fetch_y_val = 0;
 
 
-    // assign rval = active ? mem_bgr_buf_r[h_count & 'h1F][3:0] : 4'b0;
-    // assign gval = active ? mem_bgr_buf_r[h_count & 'h1F][7:4] : 4'b0;
-    // assign bval = active ? mem_bgr_buf_r[h_count & 'h1F][11:8] : 4'b0;
+    assign rval = active ? mem_bgr_buf_r[h_count & 'h1F][3:0] : 4'b0;
+    assign gval = active ? mem_bgr_buf_r[h_count & 'h1F][7:4] : 4'b0;
+    assign bval = active ? mem_bgr_buf_r[h_count & 'h1F][11:8] : 4'b0;
     assign hs = ~((h_count >= HS_START) & (h_count < HS_END));
     assign vs = ~((v_count >= VS_START) & (v_count < VS_END));
 
@@ -63,26 +63,29 @@ module vga(
     always @ (posedge clk) begin
         if (~rst)  // reset to start of frame
         begin
-            h_count <= 0;
-            v_count <= 0;
+            // set such that the first tick sets values to zero
+            h_count <= TICKS_PER_LINE - 1;
+            v_count <= LINES_PER_SCREEN - 1;
         end
-
-        if (mem_stb) begin
-            mem_bgr_buf_r <= mem_bgr_buf;
-        end
-        
-        if (pix_stb)
-        begin
-            if (h_count == TICKS_PER_LINE - 1)  // end of line
-            begin
-                h_count <= 0;
-                v_count <= v_count + 1;
+        else begin
+            if (mem_stb) begin
+                mem_bgr_buf_r <= mem_bgr_buf;
             end
-            else 
-                h_count <= h_count + 1;
+            
+            if (pix_stb)
+            begin
+                if (h_count == TICKS_PER_LINE - 1)  // end of line
+                begin
+                    h_count <= 0;
+                    v_count <= v_count + 1;
+                end
+                else 
+                    h_count <= h_count + 1;
 
-            if (v_count == LINES_PER_SCREEN - 1)  // end of screen
-                v_count <= 0;
+                if (v_count == LINES_PER_SCREEN - 1)  // end of screen
+                    v_count <= 0;
+            end
         end
+
     end
 endmodule

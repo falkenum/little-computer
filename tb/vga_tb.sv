@@ -125,6 +125,7 @@ module vga_tb;
         while (lc_c.mem_map_c.state !== lc_c.mem_map_c.STATE_FETCH_VGA) begin
             #SYS_CYCLE;
         end
+        #SYS_CYCLE;
 
         `ASSERT_EQ(lc_c.mem_map_c.dram_addr, {6'b1, 9'd0, 10'd0});
         `ASSERT_EQ(lc_c.sdram_ctl_c.state, lc_c.sdram_ctl_c.STATE_IDLE);
