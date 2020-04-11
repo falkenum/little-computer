@@ -1,14 +1,14 @@
-    j start
+    j print:
 vga_write_addr:
     .word F80C
-pix_per_line:
+screen_width:
     .word 0280 #640 in decimal
-lines_per_screen:
+screen_height:
     .word 01E0 #480 in decimal
 bg_color:
     .word 0888
 snk_color:
-    .word 0008
+    .word 0808
 snk_width:
     .word 0040
 txrdy_addr:
@@ -19,55 +19,65 @@ zero_char:
     .string "0"
 msg:
     .string "hello world\n"
-start:
-    # store the write addr into r1
-    lw vga_write_addr r0 r1
-    lw pix_per_line r0 r2
-    lw lines_per_screen r0 r3
-    lw bg_color r0 r4
 
-    # r4 is x reg
-    addi 0 r0 r5
+# r1: color
+# r2: width
+# r3: height
+# r4: x
+# r5: y
+draw_rect:
+    push r6
+    lw vga_write_addr r0 r6
+    # lw pix_per_line r0 r5
+    # lw lines_per_screen r0 r3
 
-    # r5 is y reg
-    addi 0 r0 r6
+    push r4
 
-loop:
+rectloop:
     # x write
-    sw 0 r1 r5
+    sw 0 r6 r4
     # y write
-    sw 0 r1 r6
+    sw 0 r6 r5
     # bgr write
-    sw 0 r1 r4
+    sw 0 r6 r1
 
-    addi 1 r5 r5
+    # inc x
+    addi 1 r4 r4
 
-    # if we have done 640 pixels, go to next line
-    beq line_complete r2 r5
-    j loop
+    beq line_complete r2 r4
+    j rectloop
+
 line_complete:
-    jl print
+    # jl print
     # inc y
-    addi 1 r6 r6
+    addi 1 r5 r5
     # reset x
-    addi 0 r0 r5
-    beq main r6 r3
-    j loop
+    pop r4
+    push r4
+    # check if done
+    beq rectret r5 r3
+    j rectloop
+rectret:
+    pop r4
+    pop r6
+    rts
 
-main:
-    # x
-    addi 0 r0 r5
-    # y
-    addi 0 r0 r6
-    # snake color
-    lw snk_color r0 r4
-
-    # width
-    lw snk_width r0 r2
-    # height
-    lw snk_width r0 r3
-    j loop
+start:
+    jl print
     halt
+main:
+    lw bg_color r0 r1
+    lw screen_width r0 r2
+    lw screen_height r0 r3
+    # x
+    addi 0 r0 r4
+    # y
+    addi 0 r0 r5
+    # jl draw_rect
+
+    halt
+
+
 
     
 print:
@@ -122,4 +132,4 @@ end:
     pop r3
     pop r2
     pop r1
-    rts
+    halt
