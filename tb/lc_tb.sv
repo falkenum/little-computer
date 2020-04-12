@@ -143,7 +143,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h6001);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h6002);
-        `ASSERT_EQ(lc_c.sdram_c.mem[31], 'h6002);
+        `ASSERT_EQ(sdram_c.mem[31], 'h6002);
 
         #CPU_CYCLE;
 
@@ -158,7 +158,7 @@ module lc_tb;
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h1);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[2], 'h4044);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[3], 'h4042);
-        `ASSERT_EQ(lc_c.sdram_c.mem[17], 'h4042);
+        `ASSERT_EQ(sdram_c.mem[17], 'h4042);
 
         load_instr("s/subroutine.mem", 6);
 
@@ -167,7 +167,7 @@ module lc_tb;
         end
         `ASSERT_EQ(lc_c.cpu_c.reg_file[0], 0);
         `ASSERT_EQ(lc_c.cpu_c.reg_file[1], 'h1);
-        `ASSERT_EQ(lc_c.cpu_c.lr, 'h5);
+        `ASSERT_EQ(lc_c.cpu_c.reg_file[7], 'h5);
 
         load_instr("s/stack.mem", 16);
 

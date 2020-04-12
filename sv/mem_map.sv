@@ -11,6 +11,7 @@ module mem_map(
     input clk_stb_800k,
     input write_en,
     input vga_en,
+    input vga_vblank,
     input [4:0] vga_x_group,
     input [8:0] vga_y_val,
     input clk,
@@ -35,6 +36,7 @@ module mem_map(
     localparam UART_TX_READY = 16'hF80A;
     localparam UART_TX_BYTE = 16'hF80B;
     localparam VGA_WRITE = 16'hF80C;
+    localparam VGA_VBLANK = 16'hF80D;
 
     // write 1: x
     // write 2: y
@@ -113,9 +115,19 @@ module mem_map(
             uart_tx_start_n <= 1;
             uart_tx_ready_vals <= 2'b11;
             vga_write_state <= VGA_WRITE_STATE_X;
-            dram_burst_en <= 1'b0;
             led <= 10'b0;
             instr <= 'hFFFF;
+            read_data <= 0;
+            vga_x_in <= 0;
+            vga_y_in <= 0;
+
+            dram_burst_en <= 1'b0;
+            dram_write_en <= 0;
+            dram_refresh_data <= 0;
+            dram_addr <= 0;
+            dram_data_in <= 0;
+
+            uart_tx_byte <= 0;
         end
 
         else begin
@@ -197,6 +209,9 @@ module mem_map(
                     got_data <= 1;
                     if (data_addr == UART_TX_READY) begin   
                         read_data <= uart_tx_ready ? 16'b1 : 16'b0;
+                    end
+                    else if (data_addr == VGA_VBLANK) begin
+                        read_data <= {15'b0, vga_vblank};
                     end
                     else begin
                         read_data <= dram_read_data;

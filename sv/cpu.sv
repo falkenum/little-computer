@@ -15,16 +15,15 @@ module cpu(
 );
 
 
-    reg [`WORD_WIDTH-1:0] lr, sp;
-    reg [`WORD_WIDTH-1:0] reg_file [`NUM_REGS];
-    reg [1:0] cpu_clk_vals;
+    reg [`WORD_WIDTH-1:0] sp;
+    reg [`NUM_REGS-1:0][`WORD_WIDTH-1:0] reg_file;
+    // reg [1:0] cpu_clk_vals;
 
     wire [`OP_WIDTH-1:0] op = instr[`WORD_WIDTH-1:`WORD_WIDTH-`OP_WIDTH];
     wire [`NUM_REGS_WIDTH-1:0] rs = instr[3*`NUM_REGS_WIDTH-1:2*`NUM_REGS_WIDTH];
     wire [`NUM_REGS_WIDTH-1:0] rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     wire [`NUM_REGS_WIDTH-1:0] rd = instr[`NUM_REGS_WIDTH-1:0];
     wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
-    // wire cpu_clk = ;
     wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J | op == `OP_JL;
@@ -66,13 +65,15 @@ module cpu(
             pc <= 16'hFFFF;
             sp <= STACK_BEGIN;
             // cpu_clk_vals <= 2'b11;
-            reg_file[0] <= 0;
+            reg_file <= 0;
         end
 
         // posedge of cpu clk
         else if (clk_stb_800k) begin
             // $display("pc changed at time ", $time);
-            lr <= op == `OP_JL ? pc + 1 : lr;
+            
+            // r7 is lr
+            reg_file[7] <= op == `OP_JL ? pc + 1 : reg_file[7];
             sp <= op == `OP_PUSH ? sp - 1 :
                  (op == `OP_POP ? sp + 1 : sp);
 
@@ -81,7 +82,7 @@ module cpu(
                 (halted ? pc : 
                 (beq_taken ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : 
-                (op == `OP_RTS ? lr : pc + 1))));
+                (op == `OP_RTS ? reg_file[7] : pc + 1))));
             // $display("pc is now: %x", pc);
             if (reg_write_en) begin
                 // $display("rs_val: %x, rt_val: %x, rs: %x, rt: %x", rs_val, rt_val, rs, rt);

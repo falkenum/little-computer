@@ -25,6 +25,14 @@ utypes = {"not"}
 stypes = {"push", "pop"}
 jtypes = {"j", "jl"}
 
+def get_reg_num(reg_str):
+    if reg_str == 'lr':
+        reg_str = 'r7'
+    assert(reg_str[0] == 'r')
+    num = int(reg_str[1:])
+    assert(num < 8)
+    return num
+
 def get_machine_code(instr_str, pc, labels):
     instr_split = instr_str.split()
     op_str = instr_split[0]
@@ -73,9 +81,7 @@ def get_machine_code(instr_str, pc, labels):
         first_arg_shamt = 0
     elif op_str in rtypes | utypes:
         # else it's a register
-        assert(instr_split[inst_i][0] == 'r')
-        first_arg = int(instr_split[inst_i][1:])
-        assert(first_arg < 8)
+        first_arg = get_reg_num(instr_split[inst_i])
 
 
     instr |= first_arg << first_arg_shamt
@@ -84,26 +90,21 @@ def get_machine_code(instr_str, pc, labels):
 
     # if it's a three arg instruction
     if op_str in rtypes | itypes:
-        assert(instr_split[inst_i][0] == 'r')
-        second_arg = int(instr_split[inst_i][1:]) 
-        assert(second_arg < 8)
+        second_arg = get_reg_num(instr_split[inst_i])
         instr += second_arg << 3
         inst_i += 1
     
     if op_str in rtypes | itypes | utypes:
-        assert(instr_split[inst_i][0] == 'r')
-        third_arg = int(instr_split[inst_i][1:]) 
+        third_arg = get_reg_num(instr_split[inst_i])
         assert(third_arg < 8)
         instr |= third_arg
-    if op_str in stypes:
-        assert(instr_split[inst_i][0] == 'r')
-        third_arg = int(instr_split[inst_i][1:])
-        assert(third_arg < 8)
+    elif op_str in stypes:
+        third_arg = get_reg_num(instr_split[inst_i])
         instr |= third_arg
     return instr
 
 def strip_comment(line):
-    comment_start = line.find('#')
+    comment_start = line.find(';')
     # if it's a comment
     if comment_start != -1:
         return line[:comment_start]

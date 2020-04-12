@@ -66,7 +66,6 @@ module little_computer(
     reg [`WORD_WIDTH-1:0] uart_word_count;
     reg [1:0] uart_word_ready_vals;
     reg [7:0] load_en_vals;
-    reg [1:0] key1_vals;
     reg [1:0] state;
     reg [15:0] vga_pix_stb_cnt, stb_800k_cnt;
     reg vga_pix_stb, stb_800k;
@@ -80,7 +79,7 @@ module little_computer(
 
     wire uart_byte_ready, uart_word_ready, cpu_mem_write_en, mem_map_dram_write_en,
         mem_map_to_dram_refresh, dram_to_mem_map_data_ready, dram_ready, uart_tx_ready, uart_tx,
-        uart_tx_start_n, mem_map_dram_burst_en;
+        uart_tx_start_n, mem_map_dram_burst_en, vga_vblank;
     wire [`WORD_WIDTH-1:0] uart_word, dram_data, mem_map_to_dram_data,
         mem_map_lw_data, instr, pc, cpu_data, cpu_data_addr;
     wire [7:0] uart_rx_byte, uart_tx_byte;
@@ -105,7 +104,7 @@ module little_computer(
         .gval(VGA_G),
         .bval(VGA_B),
         .enable(state == STATE_RUN),
-        .vblank(),     // high during blanking interval
+        .vblank(vga_vblank),     // high during blanking interval
         .mem_fetch_en(vga_mem_fetch_en),
         .mem_fetch_x_group(vga_x_group),
         .mem_fetch_y_val(vga_y_val),
@@ -185,6 +184,7 @@ module little_computer(
         .rst(sysrst),
         .uart_tx_ready(uart_tx_ready),
         .vga_en(vga_mem_fetch_en),
+        .vga_vblank(vga_vblank),
         .vga_x_group(vga_x_group),
         .vga_y_val(vga_y_val),
         .vga_bgr_buf(vga_bgr_buf),
@@ -241,8 +241,7 @@ module little_computer(
             uart_word_count <= 0;
             uart_word_ready_vals <= 2'b00;
             state <= STATE_RESET;
-            load_en_vals <= 2'b11;
-            key1_vals <= 2'b11;
+            load_en_vals <= 0;
             vga_pix_stb <= 0;
             stb_800k <= 0;
             vga_pix_stb_cnt <= 'h0000;

@@ -66,6 +66,7 @@ module vga(
             // set such that the first tick sets values to zero
             h_count <= TICKS_PER_LINE - 1;
             v_count <= LINES_PER_SCREEN - 1;
+            mem_bgr_buf_r <= 0;
         end
         else begin
             if (mem_stb) begin

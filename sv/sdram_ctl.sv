@@ -123,6 +123,10 @@ module sdram_ctl(
             data_ready <= 0;
             mem_ready <= 0;
             drive_val <= 0;
+            cmd <= CMD_NOP;
+            burst_buf <= 0;
+            dram_ba <= 0;
+            dram_addr <= 0;
 		end
         else begin
             state <= next_state_func(state);
