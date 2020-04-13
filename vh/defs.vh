@@ -28,6 +28,7 @@
 `define OP_RTS 4'hA
 `define OP_PUSH 4'hB
 `define OP_POP 4'hC
+`define OP_BLT 4'hD
 
 `define OP_HALT 4'hE
 `define OP_NOP 4'hF

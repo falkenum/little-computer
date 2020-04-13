@@ -24,16 +24,16 @@ module cpu(
     wire [`NUM_REGS_WIDTH-1:0] rt = instr[2*`NUM_REGS_WIDTH-1:`NUM_REGS_WIDTH];
     wire [`NUM_REGS_WIDTH-1:0] rd = instr[`NUM_REGS_WIDTH-1:0];
     wire [`WORD_WIDTH-1:0] rs_val = reg_file[rs], rt_val = reg_file[rt], rd_val = reg_file[rd];
-    wire is_beq = op == `OP_BEQ;
     wire halted = op == `OP_HALT;
     wire jtype = op == `OP_J | op == `OP_JL;
     wire is_lw = op == `OP_LW;
     wire is_sw = op == `OP_SW;
     wire use_data_in = is_lw | (op == `OP_POP);
-    wire itype = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b01;
-    wire alu_use_imm = itype & ~is_beq;
+    wire itype = (op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b01) | op == `OP_BLT;
+    wire alu_use_imm = itype & ~(op == `OP_BEQ | op == `OP_BLT);
     wire reg_write_en = op[`OP_WIDTH-1:`OP_WIDTH-2] == 'b00 | op == `OP_ADDI | op == `OP_LW | op == `OP_POP;
-    wire beq_taken = is_beq & (rt_val == rd_val);
+    wire beq_taken = (op == `OP_BEQ) & (rt_val == rd_val);
+    wire blt_taken = (op == `OP_BLT) & (rt_val < rd_val);
 
     wire [`ALU_OP_WIDTH-1:0] alu_op = (is_lw | is_sw) ? `ALU_OP_ADD : op[`OP_WIDTH-3:`OP_WIDTH-4];
     wire [`IMM_WIDTH-1:0] imm = instr[(`WORD_WIDTH-`OP_WIDTH-1):2*`NUM_REGS_WIDTH];
@@ -80,7 +80,7 @@ module cpu(
             // $display("cpu is halted: %b", halted);
             pc <= pc == 'hFFFF ? 0 : 
                 (halted ? pc : 
-                (beq_taken ? imm_extended + pc + 1 : 
+                ((beq_taken | blt_taken) ? imm_extended + pc + 1 : 
                 (jtype ? jimm_extended : 
                 (op == `OP_RTS ? reg_file[7] : pc + 1))));
             // $display("pc is now: %x", pc);

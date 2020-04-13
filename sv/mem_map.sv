@@ -222,7 +222,6 @@ module mem_map(
                     else begin
                         read_data <= dram_read_data;
                     end
-                    led[3:0] <= keys;
 
                 end
                 STATE_FETCH_VGA: begin

@@ -15,11 +15,12 @@ op_to_code = {
     'rts': 0b1010,
     'push': 0b1011,
     'pop': 0b1100,
+    'blt': 0b1101,
     'halt': 0b1110,
     'nop': 0b1111
 }
 ktypes = {"halt", "nop", "rts"}
-itypes = {"addi", "beq", "lw", "sw"}
+itypes = {"addi", "beq", "blt", "lw", "sw"}
 rtypes = {"add", "lsl", "and"}
 utypes = {"not"}
 stypes = {"push", "pop"}
@@ -60,7 +61,7 @@ def get_machine_code(instr_str, pc, labels):
         except ValueError:
             assert (first_arg in labels)
             subs_val = labels[first_arg]
-            if op_str == "beq":
+            if op_str == "beq" or op_str == "blt":
                 first_arg = subs_val - (pc + 1)
             else:
                 first_arg = subs_val
@@ -178,7 +179,7 @@ def main():
             fout_mem.close()
             os.remove(filename_rom)
             os.remove(filename_mem)
-            print(f"ERROR at line {pc_to_src_line[pc]:}")
+            print(f"ERROR at source line {pc_to_src_line[pc]:}")
             raise e
         fout_rom.write(instr.to_bytes(length=2, byteorder='little'))
         fout_mem.write(f"{instr:04X}\n")
