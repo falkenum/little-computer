@@ -51,7 +51,7 @@ module little_computer(
 	// output 		          		GSENSOR_SDO,
 
 	//////////// Arduino //////////
-	// inout 		    [15:0]		ARDUINO_IO,
+	input 		    [15:0]		ARDUINO_IO,
 	// inout 		          		ARDUINO_RESET_N,
 
 	//////////// GPIO, GPIO connect to GPIO Default //////////
@@ -183,6 +183,7 @@ module little_computer(
         .clk_stb_800k(stb_800k),
         .rst(sysrst),
         .uart_tx_ready(uart_tx_ready),
+        .keys(ARDUINO_IO[3:0]),
         .vga_en(vga_mem_fetch_en),
         .vga_vblank(vga_vblank),
         .vga_x_group(vga_x_group),

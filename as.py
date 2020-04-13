@@ -112,9 +112,12 @@ def strip_comment(line):
         return line
 
 def get_instructions(lines, labels):
-    lines_i = 0
+    pc = 0
     instructions = []
-    for line in lines:
+    # indexed by pc
+    pc_to_src_line = {} 
+
+    for linenum, line in enumerate(lines):
         line = line.strip()
         line = strip_comment(line)
 
@@ -125,7 +128,7 @@ def get_instructions(lines, labels):
         if line[-1] == ':':
             label = line[:-1]
             assert(label not in labels)
-            labels[label] = lines_i
+            labels[label] = pc
             continue
 
         # if it's a string directive, convert it to a bunch of word directives
@@ -139,12 +142,13 @@ def get_instructions(lines, labels):
                 instructions.append(f".word {b:04x}")
             
             instructions.append(".word 0000")
-            lines_i += len(literal) + 1
+            pc += len(literal) + 1
             continue
 
+        pc_to_src_line[pc] = linenum + 1
         instructions.append(line)
-        lines_i += 1
-    return instructions
+        pc += 1
+    return pc_to_src_line, instructions
 
 def main():
     assert (ktypes | itypes | rtypes | utypes | stypes | jtypes == op_to_code.keys())
@@ -163,9 +167,10 @@ def main():
     fout_mem = open(filename_mem, 'w')
 
     labels = {}
+    pc_to_src_line, instructions = get_instructions(lines, labels)
 
     # convert instructions to machine code
-    for pc, instr_str in enumerate(get_instructions(lines, labels)):
+    for pc, instr_str in enumerate(instructions):
         try:
             instr = get_machine_code(instr_str, pc, labels)
         except Exception as e:
@@ -173,6 +178,7 @@ def main():
             fout_mem.close()
             os.remove(filename_rom)
             os.remove(filename_mem)
+            print(f"ERROR at line {pc_to_src_line[pc]:}")
             raise e
         fout_rom.write(instr.to_bytes(length=2, byteorder='little'))
         fout_mem.write(f"{instr:04X}\n")
