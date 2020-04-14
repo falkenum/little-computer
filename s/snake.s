@@ -1,8 +1,8 @@
     j start
 snk_addr:
     .word snk
-keyvals_addr:
-    .word keyvals
+key_times_addr:
+    .word key_times
 ; these are random numbers generated based on the time between key presses
 randx:
     .word 0000
@@ -26,8 +26,10 @@ screen_height:
     .word 01E0 ;480 in decimal
 colors_addr:
     .word colors
+tile_size:
+    .word 0008
 start:
-    jl reset
+    jl reset_game
 
     ; jl gen_food_coord
     ; addi 0 r1 r4
@@ -42,11 +44,23 @@ start:
 vblank_done:
     jl update_dir
 
-    jl move_snake
+    lw snk_addr r0 r1
+    lw snk@move_frame_count r1 r2
+    ; inc frame count
+    addi 1 r2 r2
+    sw snk@move_frame_count r1 r2
+    lw snk@move_period r1 r3
+    beq do_move_snake r2 r3
+    j end_move_snake
+do_move_snake:
+    ; reset frame count
+    sw snk@move_frame_count r1 r0
 
+    jl move_snake
     jl check_collision
     addi 1 r0 r2
     beq start r1 r2
+end_move_snake:
 
     jl inc_key_times
 
@@ -62,7 +76,7 @@ main:
 main_j:
     j main
 
-reset:
+reset_game:
     push lr
     ; drawing the background
     lw colors_addr r0 r1
@@ -90,9 +104,10 @@ reset:
     sw snk@y r2 r1
     pop lr
     rts
+
 inc_key_times:
 
-    lw keyvals_addr r0 r2
+    lw key_times_addr r0 r2
     ; add to key timers
     lw 0 r2 r1
     addi 19 r1 r1
@@ -126,7 +141,7 @@ check_collision:
     addi -1 r2 r2
     blt collision_found r2 r1
     ; check if right side has gone too far
-    lw snk@width r4 r3
+    lw tile_size r0 r3
     add r1 r3 r1
     blt collision_found r2 r1
     ; check top
@@ -137,7 +152,7 @@ check_collision:
     blt collision_found r2 r1
 
     ; check bottom
-    lw snk@width r4 r3
+    lw tile_size r0 r3
     add r1 r3 r1
     blt collision_found r2 r1
 
@@ -154,6 +169,7 @@ update_dir:
     ; get key values
     lw keys_addr r0 r1
     lw 0 r1 r1
+    lw key_times_addr r0 r6
 
     ; translating key values into a direction:
     ; we are going to use the first high value we find,
@@ -170,12 +186,12 @@ update_dir:
     ; if keys & mask is 0, then check the next key
     beq dir_check_up r0 r4
     ; else load 00 into snk_dir
+
     push r1
     lw snk_addr r0 r1
     sw snk@dir r1 r0
     pop r1
 
-    lw keyvals_addr r0 r6
     lw 0 r6 r4
     lw randx r0 r5
     ; add to rand value
@@ -196,7 +212,10 @@ dir_check_up:
     ; if keys & mask is 0, then check the next key
     beq dir_check_left r0 r4
     ; else load 01 into snk_dir
-    sw snk_dir r0 r3
+    push r1
+    lw snk_addr r0 r1
+    sw snk@dir r1 r3
+    pop r1
 
     lw 1 r6 r4
     lw randy r0 r5
@@ -218,8 +237,11 @@ dir_check_left:
     ; if keys & mask is 0, then check the next key
     beq dir_check_down r0 r4
     ; else load 10 into snk_dir
+    push r1
+    lw snk_addr r0 r1
     addi 2 r0 r5
-    sw snk_dir r0 r5
+    sw snk@dir r1 r5
+    pop r1
 
     lw 2 r6 r4
     lw randx r0 r5
@@ -241,8 +263,11 @@ dir_check_down:
     ; if keys & mask is 0, then no key is pressed
     beq update_dir_end r0 r4
     ; else load 11 into snk_dir
+    push r1
+    lw snk_addr r0 r1
     addi 3 r0 r5
-    sw snk_dir r0 r5
+    sw snk@dir r1 r5
+    pop r1
 
     lw 3 r6 r4
     lw randy r0 r5
@@ -304,21 +329,20 @@ y_generated:
 move_snake:
     ; erase old tile
     ; TODO: only erase and draw the needed number of pixels, not a whole tile
+    lw snk_addr r0 r6
     lw colors_addr r0 r1
     lw colors@bg r1 r1
-    lw snk_width r0 r2
-    lw snk_width r0 r3
-    lw snk_x r0 r4
-    lw snk_y r0 r5
+    lw snk@x r6 r2
+    lw snk@y r6 r3
 
     push lr
-    jl draw_rect
+    jl draw_tile
     pop lr
 
-    lw snk_delta r0 r1
+    lw snk_addr r0 r6
 
     ; check which direction we are going
-    lw snk_dir r0 r2
+    lw snk@dir r6 r2
     addi 0 r0 r3
     beq going_right r2 r3
     addi 1 r0 r3
@@ -328,43 +352,37 @@ move_snake:
     addi 3 r0 r3
     beq going_down r2 r3
 going_right:
-    ; change x by delta and store back in memory
-    lw snk_x r0 r4
-    add r1 r4 r4
-    sw snk_x r0 r4
+    ; change x by 1 and store back in memory
+    lw snk@x r6 r4
+    addi 1 r4 r4
+    sw snk@x r6 r4
     j moved
 going_up:
-    ; change y by -delta and store back in memory
-    lw snk_y r0 r4
-    not r1 r1
-    addi 1 r1 r1
-    add r1 r4 r4
-    sw snk_y r0 r4
+    ; change y by -1 and store back in memory
+    lw snk@y r6 r4
+    addi -1 r4 r4
+    sw snk@y r6 r4
     j moved
 going_left:
-    ; change x by -delta and store back in memory
-    lw snk_x r0 r4
-    not r1 r1
-    addi 1 r1 r1
-    add r1 r4 r4
-    sw snk_x r0 r4
+    ; change x by -1 and store back in memory
+    lw snk@x r6 r4
+    addi -1 r4 r4
+    sw snk@x r6 r4
     j moved
 going_down:
-    ; change y by delta and store back in memory
-    lw snk_y r0 r4
-    add r1 r4 r4
-    sw snk_y r0 r4
+    ; change y by 1 and store back in memory
+    lw snk@y r6 r4
+    addi 1 r4 r4
+    sw snk@y r6 r4
 moved:
     ; draw new location
     lw colors_addr r0 r1
     lw colors@snk r1 r1
-    lw snk_width r0 r2
-    lw snk_width r0 r3
-    lw snk_x r0 r4
-    lw snk_y r0 r5
+    lw snk@x r6 r2
+    lw snk@y r6 r3
 
     push lr
-    jl draw_rect
+    jl draw_tile
     pop lr
 
     rts
@@ -385,6 +403,23 @@ vblank_check:
 vblank_end:
     rts
 
+; r1: color
+; r2: x
+; r3: y
+draw_tile:
+    push lr
+    
+    ; tile size is 2^3
+    addi 3 r0 r6
+    lsl r2 r6 r4
+    lsl r3 r6 r5
+    lw tile_size r0 r2
+    addi 0 r2 r3
+
+    jl draw_rect
+    
+    pop lr
+    rts
 
 ; r1: color
 ; r2: width
@@ -432,7 +467,7 @@ colors@food:
     .word 080C
 colors@bg:
     .word 0888
-keyvals:
+key_times:
     .word 0000
     .word 0000
     .word 0000
@@ -447,11 +482,13 @@ snk@dir:
     .word 0000
 snk@len:
     .word 0000
-snk@delta:
-    .word 0002
+
+; period of movement per tile in frames
+snk@move_period:
+    .word 0004
+snk@move_frame_count:
+    .word 0000
 snk@start_x:
-    .word 0140
+    .word 0028
 snk@start_y:
-    .word 00F0
-snk@width:
-    .word 0008
+    .word 001E
