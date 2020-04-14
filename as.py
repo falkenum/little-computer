@@ -39,7 +39,13 @@ def get_machine_code(instr_str, pc, labels):
     op_str = instr_split[0]
 
     if instr_split[0] == ".word":
-        return int(instr_split[1], base=16)
+        word_val = 0
+        if instr_split[1] in labels:
+            word_val = labels[instr_split[1]]
+        else:
+            word_val = int(instr_split[1], base=16)
+
+        return word_val
 
     assert(op_str in op_to_code)
     opcode = op_to_code[op_str]
@@ -129,7 +135,14 @@ def get_instructions(lines, labels):
         if line[-1] == ':':
             label = line[:-1]
             assert(label not in labels)
-            labels[label] = pc
+            array_label_match = re.match(r'(.+)@.+', label)
+            if array_label_match:
+                array_base_label = array_label_match.group(1)
+                assert(array_base_label in labels)
+                base_addr = labels[array_base_label]
+                labels[label] = pc - base_addr
+            else:
+                labels[label] = pc
             continue
 
         # if it's a string directive, convert it to a bunch of word directives
