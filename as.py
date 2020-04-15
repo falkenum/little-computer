@@ -158,6 +158,14 @@ def get_instructions(lines, labels):
             instructions.append(".word 0000")
             pc += len(literal) + 1
             continue
+            
+        if line.split()[0] == ".array":
+            size = int(line.split()[1])
+            for i in range(size):
+                instructions.append(".word 0000")
+            pc += size
+            continue
+
 
         pc_to_src_line[pc] = linenum + 1
         instructions.append(line)

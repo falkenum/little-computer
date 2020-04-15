@@ -39,7 +39,7 @@ module mem_map(
     localparam VGA_WRITE = 16'hF80C;
     localparam VGA_VBLANK = 16'hF80D;
     localparam KEYS = 16'hF80E;
-    localparam SCREEN_BUF_SEL = 16'hF80F;
+    // localparam SCREEN_BUF_SEL = 16'hF80F;
 
     // write 1: x
     // write 2: y
@@ -64,7 +64,7 @@ module mem_map(
     reg [1:0] vga_write_state;
     reg [9:0] vga_x_in;
     reg [8:0] vga_y_in;
-    reg screen_buf_sel;
+    // reg screen_buf_sel;
 
     genvar i;
     generate
@@ -132,7 +132,7 @@ module mem_map(
             dram_data_in <= 0;
 
             uart_tx_byte <= 0;
-            screen_buf_sel <= 0;
+            // screen_buf_sel <= 0;
         end
 
         else begin
@@ -199,7 +199,8 @@ module mem_map(
                             end
                             VGA_WRITE_STATE_BGR: begin
                                 // pixels start at address 'h80000
-                                dram_addr <= {4'b0, screen_buf_sel, 1'b1, vga_y_in, vga_x_in};
+                                // dram_addr <= {4'b0, screen_buf_sel, 1'b1, vga_y_in, vga_x_in};
+                                dram_addr <= {6'b1, vga_y_in, vga_x_in};
                                 dram_write_en <= 1'b1;
                                 dram_data_in <= data_in;
                                 vga_write_state <= VGA_WRITE_STATE_X;
@@ -207,9 +208,9 @@ module mem_map(
                             default: vga_write_state <= VGA_WRITE_STATE_X;
                         endcase
                     end
-                    if (write_en && data_addr == SCREEN_BUF_SEL) begin
-                        screen_buf_sel <= data_in[0];
-                    end
+                    // if (write_en && data_addr == SCREEN_BUF_SEL) begin
+                    //     screen_buf_sel <= data_in[0];
+                    // end
 
                     wait_count <= 0;
                 end
@@ -224,9 +225,9 @@ module mem_map(
                     else if (data_addr == KEYS) begin
                         read_data <= {12'b0, keys};
                     end
-                    else if (data_addr == SCREEN_BUF_SEL) begin
-                        read_data <= {15'b0, screen_buf_sel};
-                    end
+                    // else if (data_addr == SCREEN_BUF_SEL) begin
+                    //     read_data <= {15'b0, screen_buf_sel};
+                    // end
                     else begin
                         read_data <= dram_read_data;
                     end
@@ -237,7 +238,8 @@ module mem_map(
                     dram_burst_en <= 1;
                     dram_write_en <= 0;
                     // read from the opposite buffer that we are writing to
-                    dram_addr <= {4'b0, ~screen_buf_sel, 1'b1, vga_y_val, vga_x_group, 5'b0};
+                    // dram_addr <= {4'b0, ~screen_buf_sel, 1'b1, vga_y_val, vga_x_group, 5'b0};
+                    dram_addr <= {6'b1, vga_y_val, vga_x_group, 5'b0};
                     wait_count <= 0;
                 end
             endcase

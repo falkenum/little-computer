@@ -38,7 +38,7 @@ module uart_tb();
     );
 
     localparam SYS_CYCLE = 20;
-    localparam BAUD_CYCLE = SYS_CYCLE*325*16;
+    localparam BAUD_CYCLE = SYS_CYCLE*27*16;
 
     initial begin
         forever begin
