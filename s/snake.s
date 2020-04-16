@@ -56,8 +56,7 @@ start:
     j main
 vblank_done:
     ; update next_dir
-    ; jl update_dir
-
+    jl update_dir
 
     ; jl inc_key_times
 
@@ -73,9 +72,8 @@ vblank_done:
     j main
 moved_tile:
     ; set dir = next_dir
-    ; update tail index +2 mod buflen
-    ; write new head data
-    ; check collisions with new tile
+    lw snk@next_dir r1 r2
+    sw snk@dir r1 r2
 
     ; add 2 to tail index, mod buflen
     lw snk@tail_index r1 r2
@@ -142,11 +140,11 @@ reset_game:
     lw snk_addr r0 r6
     ; tail at index 0
     sw snk@tail_index r6 r0
-    addi 2 r0 r1
-    ; head at index 2 (after x,y of first tile)
+    addi 4 r0 r1
+    ; head at index 4 (after x,y of first two tiles)
     sw snk@head_index r6 r1
-    ; start with len 2
-    addi 2 r0 r2
+    ; start with len 3
+    addi 3 r0 r2
     sw snk@len r6 r2
 
     lw snk@start_x r6 r3
@@ -163,9 +161,14 @@ reset_game:
     sw 2 r2 r3
     sw 3 r2 r4
 
+    ; store x,y for third tile
+    addi 8 r3 r3
+    sw 4 r2 r3
+    sw 5 r2 r4
+
     ; store 0 for dir and next_dir
-    sw snk@dir r1 r0
-    sw snk@next_dir r1 r0
+    sw snk@dir r6 r0
+    sw snk@next_dir r6 r0
 
     ; draw first tile
     lw colors_addr r0 r1
@@ -180,31 +183,45 @@ reset_game:
     ; loading y
     lw 1 r6 r5
 
+    push r1
+    push r2
+    push r3
+    push r4
+    push r5
+    jl draw_rect
+    pop r5
+    pop r4
+    pop r3
+    pop r2
+    pop r1
+
+    ; draw second tile
+    addi 8 r4 r4
     jl draw_rect
 
     pop lr
     rts
 
-; inc_key_times:
+inc_key_times:
 
-;     lw key_times_addr r0 r2
-;     ; add to key timers
-;     lw 0 r2 r1
-;     addi 19 r1 r1
-;     sw 0 r2 r1
+    lw key_times_addr r0 r2
+    ; add to key timers
+    lw 0 r2 r1
+    addi 19 r1 r1
+    sw 0 r2 r1
 
-;     lw 1 r2 r1
-;     addi 19 r1 r1
-;     sw 1 r2 r1
+    lw 1 r2 r1
+    addi 19 r1 r1
+    sw 1 r2 r1
 
-;     lw 2 r2 r1
-;     addi 19 r1 r1
-;     sw 2 r2 r1
+    lw 2 r2 r1
+    addi 19 r1 r1
+    sw 2 r2 r1
 
-;     lw 3 r2 r1
-;     addi 19 r1 r1
-;     sw 3 r2 r1
-;     rts
+    lw 3 r2 r1
+    addi 19 r1 r1
+    sw 3 r2 r1
+    rts
 
 check_collision:
     lw snk_addr r0 r1
@@ -235,120 +252,121 @@ check_collision_end:
     rts
 
 
-; update_dir:
-;     ; get key values
-;     lw keys_addr r0 r1
-;     lw 0 r1 r1
-;     lw key_times_addr r0 r6
+update_dir:
+    ; get key values
+    lw keys_addr r0 r1
+    lw 0 r1 r1
+    lw key_times_addr r0 r6
 
-;     ; translating key values into a direction:
-;     ; we are going to use the first high value we find,
-;     ; in the order of key 0 thru key 3, or right up left down
+    ; translating key values into a direction:
+    ; we are going to use the first high value we find,
+    ; in the order of key 0 thru key 3, or right up left down
+    ; TODO don't allow 180 degree changes in direction
 
-;     ; r2 will contain the key mask
-;     addi 1 r0 r2
+    ; r2 will contain the key mask
+    addi 1 r0 r2
 
-;     ; r3 will contain 1 to lsl with
-;     addi 1 r0 r3
+    ; r3 will contain 1 to lsl with
+    addi 1 r0 r3
 
-;     addi 0 r1 r4
-;     and r2 r4 r4
-;     ; if keys & mask is 0, then check the next key
-;     beq dir_check_up r0 r4
-;     ; else load 00 into snk_dir
+    addi 0 r1 r4
+    and r2 r4 r4
+    ; if keys & mask is 0, then check the next key
+    beq dir_check_up r0 r4
+    ; else load 00 into snk_dir
 
-;     push r1
-;     lw snk_addr r0 r1
-;     sw snk@dir r1 r0
-;     pop r1
+    push r1
+    lw snk_addr r0 r1
+    sw snk@next_dir r1 r0
+    pop r1
 
-;     lw 0 r6 r4
-;     lw randx r0 r5
-;     ; add to rand value
-;     add r4 r5 r5
-;     ; reset timer
-;     sw 0 r6 r0
-;     ; store back rand val
-;     sw randx r0 r5
+    lw 0 r6 r4
+    lw randx r0 r5
+    ; add to rand value
+    add r4 r5 r5
+    ; reset timer
+    sw 0 r6 r0
+    ; store back rand val
+    sw randx r0 r5
 
-;     j update_dir_end
-; dir_check_up:
-;     ; put keys value in r4
-;     addi 0 r1 r4
-;     ; shift the mask
-;     lsl r2 r3 r2
-;     ; and with the mask
-;     and r2 r4 r4
-;     ; if keys & mask is 0, then check the next key
-;     beq dir_check_left r0 r4
-;     ; else load 01 into snk_dir
-;     push r1
-;     lw snk_addr r0 r1
-;     sw snk@dir r1 r3
-;     pop r1
+    j update_dir_end
+dir_check_up:
+    ; put keys value in r4
+    addi 0 r1 r4
+    ; shift the mask
+    lsl r2 r3 r2
+    ; and with the mask
+    and r2 r4 r4
+    ; if keys & mask is 0, then check the next key
+    beq dir_check_left r0 r4
+    ; else load 01 into snk_dir
+    push r1
+    lw snk_addr r0 r1
+    sw snk@next_dir r1 r3
+    pop r1
 
-;     lw 1 r6 r4
-;     lw randy r0 r5
-;     ; add to rand value
-;     add r4 r5 r5
-;     ; reset timer
-;     sw 1 r6 r0
-;     ; store back rand val
-;     sw randy r0 r5
+    lw 1 r6 r4
+    lw randy r0 r5
+    ; add to rand value
+    add r4 r5 r5
+    ; reset timer
+    sw 1 r6 r0
+    ; store back rand val
+    sw randy r0 r5
 
-;     j update_dir_end
-; dir_check_left:
-;     ; put keys value in r4
-;     addi 0 r1 r4
-;     ; shift the mask
-;     lsl r2 r3 r2
-;     ; and with the mask
-;     and r2 r4 r4
-;     ; if keys & mask is 0, then check the next key
-;     beq dir_check_down r0 r4
-;     ; else load 10 into snk_dir
-;     push r1
-;     lw snk_addr r0 r1
-;     addi 2 r0 r5
-;     sw snk@dir r1 r5
-;     pop r1
+    j update_dir_end
+dir_check_left:
+    ; put keys value in r4
+    addi 0 r1 r4
+    ; shift the mask
+    lsl r2 r3 r2
+    ; and with the mask
+    and r2 r4 r4
+    ; if keys & mask is 0, then check the next key
+    beq dir_check_down r0 r4
+    ; else load 10 into snk_dir
+    push r1
+    lw snk_addr r0 r1
+    addi 2 r0 r5
+    sw snk@next_dir r1 r5
+    pop r1
 
-;     lw 2 r6 r4
-;     lw randx r0 r5
-;     ; add to rand value
-;     add r4 r5 r5
-;     ; reset timer
-;     sw 2 r6 r0
-;     ; store back rand val
-;     sw randx r0 r5
+    lw 2 r6 r4
+    lw randx r0 r5
+    ; add to rand value
+    add r4 r5 r5
+    ; reset timer
+    sw 2 r6 r0
+    ; store back rand val
+    sw randx r0 r5
 
-;     j update_dir_end
-; dir_check_down:
-;     ; put keys value in r4
-;     addi 0 r1 r4
-;     ; shift the mask
-;     lsl r2 r3 r2
-;     ; and with the mask
-;     and r2 r4 r4
-;     ; if keys & mask is 0, then no key is pressed
-;     beq update_dir_end r0 r4
-;     ; else load 11 into snk_dir
-;     push r1
-;     lw snk_addr r0 r1
-;     addi 3 r0 r5
-;     sw snk@dir r1 r5
-;     pop r1
+    j update_dir_end
+dir_check_down:
+    ; put keys value in r4
+    addi 0 r1 r4
+    ; shift the mask
+    lsl r2 r3 r2
+    ; and with the mask
+    and r2 r4 r4
+    ; if keys & mask is 0, then no key is pressed
+    beq update_dir_end r0 r4
+    ; else load 11 into snk_dir
+    push r1
+    lw snk_addr r0 r1
+    addi 3 r0 r5
+    sw snk@next_dir r1 r5
+    pop r1
 
-;     lw 3 r6 r4
-;     lw randy r0 r5
-;     ; add to rand value
-;     add r4 r5 r5
-;     ; reset timer
-;     sw 3 r6 r0
-;     ; store back rand val
-;     sw randy r0 r5
-; update_dir_end:
-;     rts
+    lw 3 r6 r4
+    lw randy r0 r5
+    ; add to rand value
+    add r4 r5 r5
+    ; reset timer
+    sw 3 r6 r0
+    ; store back rand val
+    sw randy r0 r5
+update_dir_end:
+    rts
 
 ; gen_food_coord:
 ;     lw randx r0 r1
@@ -438,18 +456,78 @@ move_head_right:
     jl draw_rect
     j moved_head
 move_head_up:
+    lw snk@move_frame_count r6 r2
+
+    lw snk@head_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; height = frame cnt + 1
+    addi 1 r2 r3
+
+    ; start by moving height into r2
+    addi 0 r3 r2
+
+    ; negate height
+    not r2 r2
+    addi 1 r2 r2
+
+    ; add 8 to -height
+    addi 8 r2 r2
+
+    ; y = head y + (8-height)
+    lw 1 r4 r5
+    add r2 r5 r5
+    ; x = head x
+    lw 0 r4 r4
+
+    ; width
+    addi 8 r0 r2
+
+    ; draw on head
+    jl draw_rect
     j moved_head
 move_head_left:
     j moved_head
 move_head_down:
 moved_head:
 
+    j move_tail_right
     ; check direction tail is facing
 
     lw colors_addr r0 r1
     lw colors@bg r1 r1
-
     lw snk_addr r0 r6
+
+    lw snk@tail_index r6 r4
+    add r6 r4 r4
+    addi snk@tile_data_buf r4 r4
+
+    ; load x of tail into r2
+    lw 0 r4 r2
+
+    ; load y of tail into r3
+    lw 1 r4 r3
+
+    ; load x of tail+1 into r4
+    lw 2 r4 r4
+
+    ; load y of tail+1 into r5
+    lw 3 r4 r5
+
+    ; if ytail = y1, the direction is left or right
+    beq move_tail_horizontal r3 r5
+move_tail_vertical:
+    ; if ytail < y1, the direction is down
+    blt move_tail_down r3 r5
+    j move_tail_up
+
+move_tail_horizontal:
+    ; if xtail < x1, the direction is right
+    blt move_tail_right r2 r4
+    j move_tail_left
 
 move_tail_right:
     lw snk@tail_index r6 r4
@@ -470,9 +548,41 @@ move_tail_right:
 
     jl draw_rect
     j moved_tail
-move_tail_up:
-    j moved_tail
 move_tail_left:
+    j moved_tail
+move_tail_up:
+    lw snk@move_frame_count r6 r2
+
+    lw snk@tail_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; height = frame cnt + 1
+    addi 1 r2 r3
+
+    ; start by moving height into r2
+    addi 0 r3 r2
+
+    ; negate height
+    not r2 r2
+    addi 1 r2 r2
+
+    ; add 8 to -height
+    addi 8 r2 r2
+
+    ; y = tail y + (8-height)
+    lw 1 r4 r5
+    add r2 r5 r5
+    ; x = tail x
+    lw 0 r4 r4
+
+    ; width
+    addi 8 r0 r2
+
+    ; draw on head
+    jl draw_rect
     j moved_tail
 move_tail_down:
 moved_tail:
