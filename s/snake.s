@@ -109,11 +109,11 @@ moved_tile:
     ; reset frame count
     sw snk@move_frame_count r1 r0
 
-    ; jl check_collision
-    ; addi 1 r0 r2
-    ; ; if r1 == 0, then go to main. else restart game
-    ; blt main r1 r2
-    ; jl reset_game
+    jl check_collision
+    addi 1 r0 r2
+    ; if r1 == 0, then go to main. else restart game
+    blt main r1 r2
+    jl reset_game
 main:
     lw vga_vblank_addr r0 r1
     ; get vblank value

@@ -3,7 +3,7 @@
 
 
 // 115200 baud
-module uart_tx #(parameter clks_per_bit = 27*16) (
+module uart_tx #(parameter clks_per_bit = 28*16) (
     input clk,
     input rst,
     input start_n,

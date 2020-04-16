@@ -2,7 +2,7 @@
 
 
 // 115200 baud for 50MHz clk
-module uart_rx #(parameter clks_per_bit = 27) (
+module uart_rx #(parameter clks_per_bit = 28) (
     input rx,
     input clk,
     input rst,
