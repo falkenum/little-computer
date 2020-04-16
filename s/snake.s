@@ -55,10 +55,9 @@ start:
 
     j main
 vblank_done:
+    ; update next_dir
+    ; jl update_dir
 
-    ; jl check_collision
-    ; addi 1 r0 r2
-    ; beq start r1 r2
 
     ; jl inc_key_times
 
@@ -73,9 +72,48 @@ vblank_done:
     beq moved_tile r2 r3
     j main
 moved_tile:
-    ; jl update_dir
+    ; set dir = next_dir
+    ; update tail index +2 mod buflen
+    ; write new head data
+    ; check collisions with new tile
+
+    ; add 2 to tail index, mod buflen
+    lw snk@tail_index r1 r2
+    addi 2 r2 r2
+    sw snk@tail_index r1 r2
+
+    ; set new head data TODO dependent on direction of movement
+    ; get old head x,y in r2,r3
+    lw snk@head_index r1 r6
+    add r6 r1 r5
+    addi snk@tile_data_buf r5 r4
+
+    ; add 2 to head index and store back TODO (mod buflen)
+    addi 2 r6 r6
+    sw snk@head_index r1 r6
+
+    ; head x
+    lw 0 r4 r2
+    addi 8 r2 r2
+    ; head y
+    lw 1 r4 r3
+
+    ; update buf index with new head index
+    add r6 r1 r5
+    addi snk@tile_data_buf r5 r4
+
+    ; store back new values
+    sw 0 r4 r2
+    sw 1 r4 r3
+
     ; reset frame count
     sw snk@move_frame_count r1 r0
+
+    ; jl check_collision
+    ; addi 1 r0 r2
+    ; ; if r1 == 0, then go to main. else restart game
+    ; blt main r1 r2
+    ; jl reset_game
 main:
     lw vga_vblank_addr r0 r1
     ; get vblank value
@@ -83,7 +121,7 @@ main:
     ; if it's 0, loop and check again
     beq main_j r1 r0
     ; else handle the vblank
-    ; jl vblank_handler
+    jl vblank_handler
     j vblank_done
 main_j:
     j main
@@ -102,15 +140,18 @@ reset_game:
 
     ; initalizing snake
     lw snk_addr r0 r6
-    ; start ptr at index 0
+    ; tail at index 0
     sw snk@tail_index r6 r0
+    addi 2 r0 r1
+    ; head at index 2 (after x,y of first tile)
+    sw snk@head_index r6 r1
     ; start with len 2
     addi 2 r0 r2
     sw snk@len r6 r2
 
     lw snk@start_x r6 r3
     lw snk@start_y r6 r4
-    addi snk@tile_data r6 r2
+    addi snk@tile_data_buf r6 r2
 
     ; store x,y for first tile
     sw 0 r2 r3
@@ -133,7 +174,7 @@ reset_game:
     addi 8 r0 r2
     addi 8 r0 r3
 
-    addi snk@tile_data r6 r6
+    addi snk@tile_data_buf r6 r6
     ; loading x
     lw 0 r6 r4
     ; loading y
@@ -165,43 +206,33 @@ reset_game:
 ;     sw 3 r2 r1
 ;     rts
 
-; swap_screen_buf:
-;     lw screen_buf_sel_addr r0 r1
-;     lw 0 r1 r2
-;     not r2 r2
-;     sw 0 r1 r2
-;     rts
+check_collision:
+    lw snk_addr r0 r1
 
-; check_collision:
-;     lw snk_addr r0 r4
-;     lw snk@x r4 r1
-;     lw screen_width r0 r2
-;     ; check if left side has wrapped around
-;     addi -1 r2 r2
-;     blt collision_found r2 r1
-;     ; check if right side has gone too far
-;     lw tile_size r0 r3
-;     add r1 r3 r1
-;     blt collision_found r2 r1
-;     ; check top
+    ; TODO check other the side in the direction of motion
+    ; right side: check if head x >= bg_x + bg_width
+    lw snk@head_index r1 r2
+    add r1 r2 r2
+    addi snk@tile_data_buf r2 r2
 
-;     lw snk@y r4 r1
-;     lw screen_height r0 r2
-;     addi -1 r2 r2
-;     blt collision_found r2 r1
+    ; load x into r3
+    lw 0 r2 r3
 
-;     ; check bottom
-;     lw tile_size r0 r3
-;     add r1 r3 r1
-;     blt collision_found r2 r1
+    ; bg_x + bg_width into r4
+    lw bg_x r0 r4
+    lw bg_width r0 r5
+    add r4 r5 r4
 
-;     ; if no collision, return 0
-;     addi 0 r0 r1
-;     j check_collision_end
-; collision_found:
-;     addi 1 r0 r1
-; check_collision_end:
-;     rts
+    blt collision_not_found r3 r4
+
+
+    ; if collision, return 1
+    addi 1 r0 r1
+    j check_collision_end
+collision_not_found:
+    addi 0 r0 r1
+check_collision_end:
+    rts
 
 
 ; update_dir:
@@ -373,54 +404,85 @@ move_snake:
 
 
     lw colors_addr r0 r1
-    lw colors@bg r1 r1
+    lw colors@snk r1 r1
 
     lw snk_addr r0 r6
     lw snk@dir r6 r2
     ; short side of rect is equal to move_frame_count at a rate of 8 frames/tile
 
-    beq move_right r2 r0
+    beq move_head_right r2 r0
     addi 1 r0 r3
-    beq move_up r2 r3
+    beq move_head_up r2 r3
     addi 2 r0 r3
-    beq move_left r2 r3
+    beq move_head_left r2 r3
     addi 3 r0 r3
-    beq move_down r2 r3
-move_right:
+    beq move_head_down r2 r3
+move_head_right:
+    lw snk@head_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; y 
+    lw 1 r4 r5
+    ; x
+    lw 0 r4 r4
     ; width = frame cnt + 1
     lw snk@move_frame_count r6 r2
     addi 1 r2 r2
     ; height
     addi 8 r0 r3
-    ; x and y from current tail tile
+
+    ; draw on head
+    jl draw_rect
+    j moved_head
+move_head_up:
+    j moved_head
+move_head_left:
+    j moved_head
+move_head_down:
+moved_head:
+
+    ; check direction tail is facing
+
+    lw colors_addr r0 r1
+    lw colors@bg r1 r1
+
+    lw snk_addr r0 r6
+
+move_tail_right:
     lw snk@tail_index r6 r4
-    addi 1 r0 r5
-    lsl r4 r5 r4
-    ; offset addr by index * 2
+    ; offset addr by index
     add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
     ; y 
     lw 1 r4 r5
     ; x
     lw 0 r4 r4
+    ; width = frame cnt + 1
+    lw snk@move_frame_count r6 r2
+    addi 1 r2 r2
+    ; height
+    addi 8 r0 r3
 
-    ; erase from tail
     jl draw_rect
-
-    ; now to draw onto head
-    lw colors_addr r0 r1
-    lw colors@snk r1 r1
-move_up:
-move_left:
-move_down:
-    
-moved:
+    j moved_tail
+move_tail_up:
+    j moved_tail
+move_tail_left:
+    j moved_tail
+move_tail_down:
+moved_tail:
 
     pop lr
     rts
 
 vblank_handler:
     push lr 
-    ; jl move_snake
+    jl move_snake
 
 vblank_check:
     lw vga_vblank_addr r0 r1
@@ -503,11 +565,13 @@ snk@start_y:
     .word 00F0
 snk@len:
     .word 0002
-
-
+snk@tile_data_len:
+    .word 0600
 ; index to the tail of the snake in the buffer
 snk@tail_index:
     .word 0000
+snk@head_index:
+    .word 0000
 ; each of the tiles has x, y
-snk@tile_data:
+snk@tile_data_buf:
     .array 1536
