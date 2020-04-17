@@ -340,7 +340,17 @@ update_dir:
     and r2 r4 r4
     ; if keys & mask is 0, then check the next key
     beq dir_check_up r0 r4
-    ; else load 00 into snk_dir
+    ; else if dir is not 10, load 00 into snk_dir
+
+    ; 180 degree turn not allowed
+    lw snk_addr r0 r4
+    lw snk@dir r4 r4
+    addi 2 r0 r5
+    beq update_dir_end_jump r4 r5
+    j update_dir_go_right
+update_dir_end_jump:
+    j update_dir_end
+update_dir_go_right:
 
     push r1
     lw snk_addr r0 r1
@@ -366,6 +376,11 @@ dir_check_up:
     and r2 r4 r4
     ; if keys & mask is 0, then check the next key
     beq dir_check_left r0 r4
+    ; 180 degree turn not allowed, check if current dir is down
+    lw snk_addr r0 r4
+    lw snk@dir r4 r4
+    addi 3 r0 r5
+    beq update_dir_end_jump r4 r5
     ; else load 01 into snk_dir
     push r1
     lw snk_addr r0 r1
@@ -391,6 +406,11 @@ dir_check_left:
     and r2 r4 r4
     ; if keys & mask is 0, then check the next key
     beq dir_check_down r0 r4
+    ; 180 degree turn not allowed, check if current dir is right
+    lw snk_addr r0 r4
+    lw snk@dir r4 r4
+    addi 0 r0 r5
+    beq update_dir_end r4 r5
     ; else load 10 into snk_dir
     push r1
     lw snk_addr r0 r1
@@ -417,6 +437,11 @@ dir_check_down:
     and r2 r4 r4
     ; if keys & mask is 0, then no key is pressed
     beq update_dir_end r0 r4
+    ; 180 degree turn not allowed, check if current dir is up
+    lw snk_addr r0 r4
+    lw snk@dir r4 r4
+    addi 1 r0 r5
+    beq update_dir_end r4 r5
     ; else load 11 into snk_dir
     push r1
     lw snk_addr r0 r1
@@ -728,11 +753,6 @@ move_tail_left:
     jl draw_rect
     j moved_tail
 move_tail_down:
-    push r1
-    push r6
-    jl print
-    pop r6
-    pop r1
     lw snk@tail_index r6 r4
     ; offset addr by index
     add r6 r4 r4
