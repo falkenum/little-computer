@@ -32,6 +32,16 @@ bg_y:
     .word 0090
 colors_addr:
     .word colors
+txrdy_addr:
+    .word F80A
+tx_addr:
+    .word F80B
+tx_count:
+    .word 0000
+zero_char:
+    .string "0"
+msg:
+    .string "hello world\n"
 start:
     ; drawing the frame
     lw colors_addr r0 r1
@@ -249,25 +259,58 @@ inc_key_times:
 
 check_collision:
     lw snk_addr r0 r1
+    lw snk@dir r1 r3
 
-    ; TODO check other the side in the direction of motion
-    ; right side: check if head x >= bg_x + bg_width
     lw snk@head_index r1 r2
     add r1 r2 r2
     addi snk@tile_data_buf r2 r2
 
+
+    ; check the side in the direction of motion
+    beq check_right_collision r3 r0
+    addi 1 r0 r4
+    beq check_up_collision r3 r4
+    addi 2 r0 r4
+    beq check_left_collision r3 r4
+    addi 3 r0 r4
+    beq check_down_collision r3 r4
+
+check_right_collision:
+    ; right side: check if head x >= bg_x + bg_width
     ; load x into r3
     lw 0 r2 r3
-
     ; bg_x + bg_width into r4
     lw bg_x r0 r4
     lw bg_width r0 r5
     add r4 r5 r4
-
     blt collision_not_found r3 r4
+    j collision_found
+check_up_collision:
+    ; up side: check if head y < bg_y
+    lw 1 r2 r3
+    lw bg_y r0 r4
+    blt collision_found r3 r4
+    j collision_not_found
+check_left_collision:
+    ; left side: check if head x < bg_x
+    lw 0 r2 r3
+    lw bg_x r0 r4
+    blt collision_found r3 r4
+    j collision_not_found
+check_down_collision:
+    ; down side: check if head y >= bg_y + bg_height
+    ; load x into r3
+    lw 1 r2 r3
+    ; bg_x + bg_width into r4
+    lw bg_y r0 r4
+    lw bg_height r0 r5
+    add r4 r5 r4
+    blt collision_not_found r3 r4
+    j collision_found
 
 
     ; if collision, return 1
+collision_found:
     addi 1 r0 r1
     j check_collision_end
 collision_not_found:
@@ -457,8 +500,7 @@ move_snake:
     beq move_head_up r2 r3
     addi 2 r0 r3
     beq move_head_left r2 r3
-    addi 3 r0 r3
-    beq move_head_down r2 r3
+    j move_head_down
 move_head_right:
     lw snk@head_index r6 r4
     ; offset addr by index
@@ -514,8 +556,56 @@ move_head_up:
     jl draw_rect
     j moved_head
 move_head_left:
+    lw snk@move_frame_count r6 r3
+
+    lw snk@head_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; width = frame cnt + 1
+    addi 1 r3 r2
+    addi 0 r2 r3
+
+    ; negate width
+    not r3 r3
+    addi 1 r3 r3
+
+    ; add 8 to -width
+    addi 8 r3 r3
+
+    ; y = head y
+    lw 1 r4 r5
+    ; x = head x + (8-width)
+    lw 0 r4 r4
+    add r3 r4 r4
+
+    ; height
+    addi 8 r0 r3
+
+    ; draw on head
+    jl draw_rect
     j moved_head
 move_head_down:
+    lw snk@head_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; y 
+    lw 1 r4 r5
+    ; x
+    lw 0 r4 r4
+    ; height = frame cnt + 1
+    lw snk@move_frame_count r6 r3
+    addi 1 r3 r3
+    ; width
+    addi 8 r0 r2
+
+    ; draw on head
+    jl draw_rect
 moved_head:
 
     lw colors_addr r0 r1
@@ -542,8 +632,10 @@ moved_head:
     beq move_tail_horizontal r3 r5
 move_tail_vertical:
     ; if ytail < y1, the direction is down
-    blt move_tail_down r3 r5
+    blt move_tail_down_jump r3 r5
     j move_tail_up
+move_tail_down_jump:
+    j move_tail_down
 
 move_tail_horizontal:
     ; if xtail < x1, the direction is right
@@ -568,8 +660,6 @@ move_tail_right:
     addi 8 r0 r3
 
     jl draw_rect
-    j moved_tail
-move_tail_left:
     j moved_tail
 move_tail_up:
     lw snk@move_frame_count r6 r2
@@ -605,7 +695,60 @@ move_tail_up:
     ; draw on head
     jl draw_rect
     j moved_tail
+move_tail_left:
+    lw snk@move_frame_count r6 r3
+
+    lw snk@tail_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; width = frame cnt + 1
+    addi 1 r3 r2
+    addi 0 r2 r3
+
+    ; negate width
+    not r3 r3
+    addi 1 r3 r3
+
+    ; add 8 to -width
+    addi 8 r3 r3
+
+    ; y = head y
+    lw 1 r4 r5
+    ; x = head x + (8-width)
+    lw 0 r4 r4
+    add r3 r4 r4
+
+    ; height
+    addi 8 r0 r3
+
+    ; draw on head
+    jl draw_rect
+    j moved_tail
 move_tail_down:
+    push r1
+    push r6
+    jl print
+    pop r6
+    pop r1
+    lw snk@tail_index r6 r4
+    ; offset addr by index
+    add r6 r4 r4
+    ; offset addr by buf location
+    addi snk@tile_data_buf r4 r4
+
+    ; y 
+    lw 1 r4 r5
+    ; x
+    lw 0 r4 r4
+    ; height = frame cnt + 1
+    lw snk@move_frame_count r6 r3
+    addi 1 r3 r3
+    ; width
+    addi 8 r0 r2
+    jl draw_rect
 moved_tail:
 
     pop lr
@@ -664,6 +807,50 @@ draw_rect_line_complete:
     j draw_rect_loop
 draw_rect_end:
     pop r4
+    rts
+
+print:
+    ; load msg addr into r1
+    addi msg r0 r1
+
+    ; load tx_addr into r2
+    lw tx_addr r0 r2
+
+    ; load txrdy_addr into r5
+    lw txrdy_addr r0 r5
+
+    ; load 1 into r4, for comparison
+    addi 1 r0 r4
+
+strloop:
+    ; load char into r3
+    lw 0 r1 r3
+
+    ; if null char, go to the end
+    beq print_end r0 r3
+
+    ; store char at tx_addr
+    sw 0 r2 r3
+
+    ; we need to wait until txrdy goes low and then high again
+
+txrdy_wait_for_low:
+    ; load txrdy value into r3
+    lw 0 r5 r3
+    beq txrdy_is_low r3 r0
+    j txrdy_wait_for_low
+
+txrdy_is_low:
+    lw 0 r5 r3
+    beq txrdy_is_high r3 r4
+    j txrdy_is_low
+
+txrdy_is_high:
+    ; inc char ptr
+    addi 1 r1 r1
+    j strloop
+
+print_end:
     rts
 
 colors:
