@@ -80,7 +80,7 @@ moved_tile:
     addi 2 r2 r2
     sw snk@tail_index r1 r2
 
-    ; set new head data TODO dependent on direction of movement
+    ; set new head data dependent on direction of movement
     ; get old head x,y in r2,r3
     lw snk@head_index r1 r6
     add r6 r1 r5
@@ -90,17 +90,41 @@ moved_tile:
     addi 2 r6 r6
     sw snk@head_index r1 r6
 
-    ; head x
+    ; set head x and y values
+    lw snk@dir r1 r2
+    beq move_tile_right r2 r0
+    addi 1 r0 r3
+    beq move_tile_up r2 r3
+    addi 2 r0 r3
+    beq move_tile_left r2 r3
+    addi 3 r0 r3
+    beq move_tile_down r2 r3
+move_tile_right:
     lw 0 r4 r2
     addi 8 r2 r2
-    ; head y
     lw 1 r4 r3
+    j end_move_tile
+move_tile_up:
+    lw 0 r4 r2
+    lw 1 r4 r3
+    addi -8 r3 r3
+    j end_move_tile
+move_tile_left:
+    lw 0 r4 r2
+    addi -8 r2 r2
+    lw 1 r4 r3
+    j end_move_tile
+move_tile_down:
+    lw 0 r4 r2
+    lw 1 r4 r3
+    addi 8 r3 r3
+end_move_tile:
 
     ; update buf index with new head index
     add r6 r1 r5
     addi snk@tile_data_buf r5 r4
 
-    ; store back new values
+    ; store back new head values
     sw 0 r4 r2
     sw 1 r4 r3
 
@@ -494,9 +518,6 @@ move_head_left:
 move_head_down:
 moved_head:
 
-    j move_tail_right
-    ; check direction tail is facing
-
     lw colors_addr r0 r1
     lw colors@bg r1 r1
     lw snk_addr r0 r6
@@ -511,11 +532,11 @@ moved_head:
     ; load y of tail into r3
     lw 1 r4 r3
 
-    ; load x of tail+1 into r4
-    lw 2 r4 r4
-
     ; load y of tail+1 into r5
     lw 3 r4 r5
+
+    ; load x of tail+1 into r4
+    lw 2 r4 r4
 
     ; if ytail = y1, the direction is left or right
     beq move_tail_horizontal r3 r5
