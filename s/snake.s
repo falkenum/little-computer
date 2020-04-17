@@ -88,6 +88,15 @@ moved_tile:
     ; add 2 to tail index, mod buflen
     lw snk@tail_index r1 r2
     addi 2 r2 r2
+    lw snk@tile_data_len r1 r3
+    ; if new tail index is already less than buflen, then store it back
+    blt moved_tile_store_tail r2 r3
+
+    ; negate buflen and add to tail index
+    not r3 r3
+    addi 1 r3 r3
+    add r2 r3 r2
+moved_tile_store_tail:
     sw snk@tail_index r1 r2
 
     ; set new head data dependent on direction of movement
@@ -96,8 +105,17 @@ moved_tile:
     add r6 r1 r5
     addi snk@tile_data_buf r5 r4
 
-    ; add 2 to head index and store back TODO (mod buflen)
+    ; add 2 to head index and store back (mod buflen)
     addi 2 r6 r6
+    lw snk@tile_data_len r1 r3
+    ; if new head index is already less than buflen, then store it back
+    blt moved_tile_store_head r6 r3
+
+    ; negate buflen and add to head index
+    not r3 r3
+    addi 1 r3 r3
+    add r6 r3 r6
+moved_tile_store_head:
     sw snk@head_index r1 r6
 
     ; set head x and y values
@@ -241,19 +259,19 @@ inc_key_times:
     lw key_times_addr r0 r2
     ; add to key timers
     lw 0 r2 r1
-    addi 19 r1 r1
+    addi 7 r1 r1
     sw 0 r2 r1
 
     lw 1 r2 r1
-    addi 19 r1 r1
+    addi 7 r1 r1
     sw 1 r2 r1
 
     lw 2 r2 r1
-    addi 19 r1 r1
+    addi 7 r1 r1
     sw 2 r2 r1
 
     lw 3 r2 r1
-    addi 19 r1 r1
+    addi 7 r1 r1
     sw 3 r2 r1
     rts
 
@@ -328,7 +346,6 @@ update_dir:
     ; translating key values into a direction:
     ; we are going to use the first high value we find,
     ; in the order of key 0 thru key 3, or right up left down
-    ; TODO don't allow 180 degree changes in direction
 
     ; r2 will contain the key mask
     addi 1 r0 r2
