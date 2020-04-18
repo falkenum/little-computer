@@ -32,6 +32,8 @@ bg_y:
     .word 0090
 colors_addr:
     .word colors
+num_tiles:
+    .word 0600
 txrdy_addr:
     .word F80A
 tx_addr:
@@ -88,7 +90,7 @@ moved_tile:
     ; add 2 to tail index, mod buflen
     lw snk@tail_index r1 r2
     addi 2 r2 r2
-    lw snk@tile_data_len r1 r3
+    lw num_tiles r0 r3
     ; if new tail index is already less than buflen, then store it back
     blt moved_tile_store_tail r2 r3
 
@@ -102,12 +104,13 @@ moved_tile_store_tail:
     ; set new head data dependent on direction of movement
     ; get old head x,y in r2,r3
     lw snk@head_index r1 r6
-    add r6 r1 r5
-    addi snk@tile_data_buf r5 r4
+    lw snk@tile_queue_addr r1 r4
+    add r6 r4 r4
 
     ; add 2 to head index and store back (mod buflen)
     addi 2 r6 r6
-    lw snk@tile_data_len r1 r3
+    lw num_tiles r0 r3
+    ; if new tail index is already less than buflen, then store it back
     ; if new head index is already less than buflen, then store it back
     blt moved_tile_store_head r6 r3
 
@@ -150,7 +153,8 @@ end_move_tile:
 
     ; update buf index with new head index
     add r6 r1 r5
-    addi snk@tile_data_buf r5 r4
+    lw snk@tile_queue_addr r1 r4
+    add r6 r4 r4
 
     ; store back new head values
     sw 0 r4 r2
@@ -201,7 +205,7 @@ reset_game:
 
     lw snk@start_x r6 r3
     lw snk@start_y r6 r4
-    addi snk@tile_data_buf r6 r2
+    lw snk@tile_queue_addr r6 r2
 
     ; store x,y for first tile
     sw 0 r2 r3
@@ -229,7 +233,7 @@ reset_game:
     addi 8 r0 r2
     addi 8 r0 r3
 
-    addi snk@tile_data_buf r6 r6
+    lw snk@tile_queue_addr r6 r6
     ; loading x
     lw 0 r6 r4
     ; loading y
@@ -277,11 +281,12 @@ inc_key_times:
 
 check_collision:
     lw snk_addr r0 r1
-    lw snk@dir r1 r3
 
     lw snk@head_index r1 r2
-    add r1 r2 r2
-    addi snk@tile_data_buf r2 r2
+    lw snk@tile_queue_addr r1 r3
+    add r2 r3 r2
+
+    lw snk@dir r1 r3
 
 
     ; check the side in the direction of motion
@@ -544,11 +549,9 @@ move_snake:
     beq move_head_left r2 r3
     j move_head_down
 move_head_right:
-    lw snk@head_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@head_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; y 
     lw 1 r4 r5
@@ -566,11 +569,9 @@ move_head_right:
 move_head_up:
     lw snk@move_frame_count r6 r2
 
-    lw snk@head_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@head_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; height = frame cnt + 1
     addi 1 r2 r3
@@ -600,11 +601,9 @@ move_head_up:
 move_head_left:
     lw snk@move_frame_count r6 r3
 
-    lw snk@head_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@head_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; width = frame cnt + 1
     addi 1 r3 r2
@@ -630,11 +629,9 @@ move_head_left:
     jl draw_rect
     j moved_head
 move_head_down:
-    lw snk@head_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@head_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; y 
     lw 1 r4 r5
@@ -654,9 +651,9 @@ moved_head:
     lw colors@bg r1 r1
     lw snk_addr r0 r6
 
-    lw snk@tail_index r6 r4
-    add r6 r4 r4
-    addi snk@tile_data_buf r4 r4
+    lw snk@tail_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; load x of tail into r2
     lw 0 r4 r2
@@ -685,11 +682,9 @@ move_tail_horizontal:
     j move_tail_left
 
 move_tail_right:
-    lw snk@tail_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@tail_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; y 
     lw 1 r4 r5
@@ -706,11 +701,9 @@ move_tail_right:
 move_tail_up:
     lw snk@move_frame_count r6 r2
 
-    lw snk@tail_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@tail_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; height = frame cnt + 1
     addi 1 r2 r3
@@ -740,11 +733,9 @@ move_tail_up:
 move_tail_left:
     lw snk@move_frame_count r6 r3
 
-    lw snk@tail_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@tail_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; width = frame cnt + 1
     addi 1 r3 r2
@@ -770,11 +761,9 @@ move_tail_left:
     jl draw_rect
     j moved_tail
 move_tail_down:
-    lw snk@tail_index r6 r4
-    ; offset addr by index
-    add r6 r4 r4
-    ; offset addr by buf location
-    addi snk@tile_data_buf r4 r4
+    lw snk@tail_index r6 r5
+    lw snk@tile_queue_addr r6 r4
+    add r4 r5 r4
 
     ; y 
     lw 1 r4 r5
@@ -920,13 +909,11 @@ snk@start_y:
     .word 00F0
 snk@len:
     .word 0002
-snk@tile_data_len:
-    .word 0600
-; index to the tail of the snake in the buffer
 snk@tail_index:
     .word 0000
 snk@head_index:
     .word 0000
-; each of the tiles has x, y
-snk@tile_data_buf:
-    .array 1536
+snk@tile_queue_addr:
+    .word 2000
+snk@tile_grid_addr:
+    .word 3000

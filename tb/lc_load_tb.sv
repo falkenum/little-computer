@@ -23,7 +23,7 @@ module lc_load_tb;
 
     localparam SYS_CYCLE = 20;
     localparam CPU_CYCLE = 64*SYS_CYCLE;
-    localparam BAUD_CYCLE = SYS_CYCLE*28*16;
+    localparam BAUD_CYCLE = SYS_CYCLE*56*16;
 
     uart_tx uart_tx_c(
         .clk(clk),

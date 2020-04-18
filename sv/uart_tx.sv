@@ -2,8 +2,8 @@
 `include "defs.vh"
 
 
-// 115200 baud
-module uart_tx #(parameter clks_per_bit = 28*16) (
+// 57600 baud
+module uart_tx #(parameter clks_per_bit = 56*16) (
     input clk,
     input rst,
     input start_n,
