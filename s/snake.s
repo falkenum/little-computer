@@ -9,6 +9,8 @@ foodx:
     .word 0000
 foody:
     .word 0000
+food_eaten:
+    .word 0000
 vga_write_addr:
     .word F80C
 vga_vblank_addr:
@@ -57,21 +59,11 @@ start:
     addi 0 r0 r5
     jl draw_rect
 
-    jl reset_game
-
-    ; addi 3 r0 r3
-    ; lw randx r0 r4
-    ; ssl r4 r3 r4
-    ; lw randy r0 r5
-    ; ssl r5 r3 r5
-    ; lw colors_addr r0 r1
-    ; lw colors@food r1 r1
-    ; lw snk_width r0 r2
-    ; lw snk_width r0 r3
-    ; jl draw_rect
-
     j main
 vblank_done:
+    ; lw rand r0 r1
+    ; jl print_hex_val
+
     ; update next_dir
     jl update_dir
 
@@ -206,6 +198,48 @@ main:
 main_j:
     j main
 
+update_food:
+    push lr
+    lw food_eaten r0 r1
+    beq update_food_end r0 r1
+
+    ; erase old food
+    lw colors_addr r0 r1
+    lw colors@bg r1 r1
+    addi 8 r0 r2
+    addi 8 r0 r3
+    lw foodx r0 r4
+    lw foody r0 r5
+    jl draw_rect
+
+    lw rand r0 r1
+    lw snk_addr r0 r2
+    lw snk@tiles_free_addr r2 r2
+    add r1 r2 r2
+    lw 0 r2 r1
+
+    ; push r1
+    ; jl print_hex_val
+    ; pop r1
+
+    jl tile_index_to_xy
+    sw foodx r0 r1
+    sw foody r0 r2
+
+    ; draw new food
+    addi 0 r1 r4
+    addi 0 r2 r5
+    addi 8 r0 r2
+    addi 8 r0 r3
+    lw colors_addr r0 r1
+    lw colors@food r1 r1
+    jl draw_rect
+
+    sw food_eaten r0 r0
+update_food_end:
+    pop lr
+    rts
+
 reset_game:
     push lr
     ; draw the play area
@@ -243,8 +277,7 @@ tiles_init_loop:
 
     ; if count < num_tiles, then loop 
     blt tiles_init_loop r5 r3
-
-    jl run_tests
+    ; jl run_tests
 
     ; initalizing snake
     lw snk_addr r0 r6
@@ -341,6 +374,9 @@ tiles_init_loop:
     addi 8 r4 r4
     jl draw_rect
 
+    addi 1 r0 r1
+    sw food_eaten r0 r1
+
     pop lr
     rts
 
@@ -380,20 +416,6 @@ run_tests:
     lw 0 r5 r1
     lw num_tiles r0 r2
     addi -1 r2 r2
-    ; push r1
-    ; push r2
-    ; push r3
-    ; push r4
-    ; push r5
-    ; push r6
-    ; addi 0 r2 r1
-    ; jl print_hex_val
-    ; pop r6
-    ; pop r5
-    ; pop r4
-    ; pop r3
-    ; pop r2
-    ; pop r1
     jl assert_eq
 
     lw snk_addr r0 r6
@@ -442,6 +464,17 @@ assert_end:
 ; r2: y
 ; return r1: index
 xy_to_tile_index:
+    ; first offset by start of play area
+    lw bg_x r0 r3
+    not r3 r3
+    addi 1 r3 r3
+    add r1 r3 r1
+
+    lw bg_y r0 r3
+    not r3 r3
+    addi 1 r3 r3
+    add r2 r3 r2
+
     ; generate tiles_grid index from x, y
     ; right shift 3 to get tile x
     addi -3 r0 r3
@@ -477,6 +510,13 @@ tile_index_to_xy:
     ssl r5 r4 r5
     addi 3 r0 r4
     ssl r5 r4 r2
+
+    ; offset by bg position
+    lw bg_x r0 r3
+    add r1 r3 r1
+    lw bg_y r0 r3
+    add r2 r3 r2
+
     rts
 
 ; r1: x
@@ -560,21 +600,39 @@ swap_mem_vals:
 inc_key_times:
 
     lw key_times_addr r0 r2
+    lw snk_addr r0 r3
+    lw snk@tiles_free_len r0 r3
+
+    not r3 r4
+    addi -1 r4 r4
+
     ; add to key timers
     lw 0 r2 r1
     addi 7 r1 r1
+    blt key0_mod r1 r3
+    add r1 r4 r1
+key0_mod:
     sw 0 r2 r1
 
     lw 1 r2 r1
     addi 7 r1 r1
+    blt key1_mod r1 r3
+    add r1 r4 r1
+key1_mod:
     sw 1 r2 r1
 
     lw 2 r2 r1
     addi 7 r1 r1
+    blt key2_mod r1 r3
+    add r1 r4 r1
+key2_mod:
     sw 2 r2 r1
 
     lw 3 r2 r1
     addi 7 r1 r1
+    blt key3_mod r1 r3
+    add r1 r4 r1
+key3_mod:
     sw 3 r2 r1
     rts
 
@@ -1081,6 +1139,7 @@ moved_tail:
 vblank_handler:
     push lr 
     jl move_snake
+    jl update_food
 
 vblank_check:
     lw vga_vblank_addr r0 r1
