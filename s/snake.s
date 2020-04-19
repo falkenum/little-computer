@@ -219,12 +219,13 @@ reset_game:
 
     ; need to initalize tiles_grid and tiles_free
     lw snk_addr r0 r1
+    ; reset tiles_free_len to the max len
+    lw num_tiles r0 r3
+
+    sw snk@tiles_free_len r1 r3
     lw snk@tiles_grid_addr r1 r2
     lw snk@tiles_free_addr r1 r1
 
-    ; reset tiles_free_len to the max len
-    lw num_tiles r0 r3
-    sw snk@tiles_free_len r1 r3
 
     ; tile count
     addi 0 r0 r5
@@ -362,7 +363,8 @@ run_tests:
     lw 0 r2 r2
     jl assert_eq
 
-    addi 1 r0 r1
+    ; tile x is 1
+    addi 8 r0 r1
     addi 0 r0 r2
     addi 1 r0 r3
     jl occupy_or_free_tile
@@ -378,9 +380,49 @@ run_tests:
     lw 0 r5 r1
     lw num_tiles r0 r2
     addi -1 r2 r2
+    ; push r1
+    ; push r2
+    ; push r3
+    ; push r4
+    ; push r5
+    ; push r6
+    ; addi 0 r2 r1
+    ; jl print_hex_val
+    ; pop r6
+    ; pop r5
+    ; pop r4
+    ; pop r3
+    ; pop r2
+    ; pop r1
     jl assert_eq
 
-    halt
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 1 r0 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    addi 1 r5 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 1 r0 r2
+    jl assert_eq
+
+    ; halt
     pop lr
     rts
 
@@ -405,6 +447,7 @@ xy_to_tile_index:
     addi -3 r0 r3
     ssl r1 r3 r1
 
+
     ; shift y val left 2 (or shift right 3 and left 5)
     addi 2 r0 r3
     ssl r2 r3 r2
@@ -415,8 +458,8 @@ xy_to_tile_index:
     not r1 r1
     not r2 r2
     and r1 r2 r1
-
     not r1 r1
+
     rts
 ; r1: tile index
 ; return r1: x, r2: y
@@ -454,52 +497,51 @@ occupy_or_free_tile:
     add r1 r4 r2
     lw 0 r2 r2
 
+
     ; swap tiles_free[j] and tiles_free[freelen-1]
-    ; push r1
-    ; push r3
-    ; push r4
-    ; push r6
+    push r1
+    push r2
+    push r3
+    push r4
+    push r6
     ; tiles_free_addr + j
     add r3 r2 r1
     
     ; tiles_free_addr + freelen-1
     lw snk@tiles_free_len r5 r5
-    ; beq first_free_swap r6 r0
+    beq first_free_swap r6 r0
     addi -1 r5 r5
-; first_free_swap:
+first_free_swap:
     add r3 r5 r2
 
     jl swap_mem_vals
-    ; pop r6
-    ; pop r4
-    ; pop r3
-    ; pop r1
+    pop r6
+    pop r4
+    pop r3
+    pop r2
+    pop r1
 
-;     ; swap tiles_grid[i] and tiles_grid[tiles_free[freelen-1]]
-;     ; tiles_grid_addr + i in r1
-;     add r1 r4 r1
-;     ; tiles_grid_addr + tiles_free[freelen-1] in r2
-;     lw snk_addr r0 r5
-;     lw snk@tiles_free_len r5 r2
-;     beq second_free_swap r6 r0
-;     addi -1 r2 r2
-; second_free_swap:
-;     add r3 r2 r2
-;     lw 0 r2 r2
-;     add r4 r2 r2
+    ; swap tiles_grid[i] and tiles_grid[tiles_free[j]]
+    ; tiles_grid_addr + i in r1
+    add r1 r4 r1
+    ; tiles_grid_addr + tiles_free[j] in r2
+    add r3 r2 r2
+    lw 0 r2 r2
+    add r4 r2 r2
 
-;     push r6
-;     jl swap_mem_vals
-;     pop r6
+    push r6
+    jl swap_mem_vals
+    pop r6
 
-    ; lw snk_addr r0 r1
-    ; lw snk@tiles_free_len r1 r2
-;     beq freelen_inc r6 r0
-;     addi -1 r2 r2
-; freelen_inc:
-;     addi 1 r2 r2
-; end_freelen_modify:
-;     sw snk@tiles_free_len r1 r2
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r2
+    beq freelen_inc r6 r0
+    addi -1 r2 r2
+    j end_freelen_modify
+freelen_inc:
+    addi 1 r2 r2
+end_freelen_modify:
+    sw snk@tiles_free_len r1 r2
 
     pop lr
     rts
