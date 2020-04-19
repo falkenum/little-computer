@@ -14,7 +14,7 @@ module alu_tb;
         `ASSERT_EQ(result, 2);
         rt_val = 3; #10;
         `ASSERT_EQ(result, 5);
-        op = `ALU_OP_LSL; #10;
+        op = `ALU_OP_SSL; #10;
         `ASSERT_EQ(result, 'h10);
         rt_val = 0; #10;
         `ASSERT_EQ(result, 'h2);

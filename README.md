@@ -5,7 +5,7 @@ This project is an implementation of a 16-bit single cycle CPU along with driver
 Instruction | 4-bit opcode | Info
 --- | --- | ---
 add | 0x0 | add 
-lsl | 0x1 | shift left
+ssl | 0x1 | shift left
 and | 0x2 | and
 not | 0x3 | not
 addi | 0x4 | add immediate

@@ -3,7 +3,7 @@ from pathlib import Path
 
 op_to_code = {
     'add': 0b0000,
-    'lsl': 0b0001,
+    'ssl': 0b0001,
     'and': 0b0010,
     'not': 0b0011,
     'addi': 0b0100,
@@ -21,7 +21,7 @@ op_to_code = {
 }
 ktypes = {"halt", "nop", "rts"}
 itypes = {"addi", "beq", "blt", "lw", "sw"}
-rtypes = {"add", "lsl", "and"}
+rtypes = {"add", "ssl", "and"}
 utypes = {"not"}
 stypes = {"push", "pop"}
 jtypes = {"j", "jl"}

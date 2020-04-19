@@ -10,7 +10,8 @@ module alu(
     always @* begin
     case (op)
         `ALU_OP_ADD: result <= rs_val + rt_val;
-        `ALU_OP_LSL: result <= rs_val << rt_val;
+        // signed shift left: if negative shift amt, shift right
+        `ALU_OP_SSL: result <= (rt_val[15] == 1'b0) ? rs_val << rt_val : rs_val >> (~rt_val + 16'b1);
         `ALU_OP_AND: result <= rs_val & rt_val;
         `ALU_OP_NOT: result <= ~rs_val;
         default: result <= 0;

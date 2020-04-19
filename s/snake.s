@@ -4,9 +4,7 @@ snk_addr:
 key_times_addr:
     .word key_times
 ; these are random numbers generated based on the time between key presses
-randx:
-    .word 0000
-randy:
+rand:
     .word 0000
 foodx:
     .word 0000
@@ -33,7 +31,7 @@ bg_y:
 colors_addr:
     .word colors
 num_tiles:
-    .word 0600
+    .word 0300
 txrdy_addr:
     .word F80A
 tx_addr:
@@ -56,9 +54,11 @@ start:
 
     jl reset_game
 
-    ; jl gen_food_coord
-    ; addi 0 r1 r4
-    ; addi 0 r2 r5
+    ; addi 3 r0 r3
+    ; lw randx r0 r4
+    ; ssl r4 r3 r4
+    ; lw randy r0 r5
+    ; ssl r5 r3 r5
     ; lw colors_addr r0 r1
     ; lw colors@food r1 r1
     ; lw snk_width r0 r2
@@ -70,7 +70,7 @@ vblank_done:
     ; update next_dir
     jl update_dir
 
-    ; jl inc_key_times
+    jl inc_key_times
 
     lw snk_addr r0 r1
     lw snk@move_frame_count r1 r2
@@ -89,8 +89,21 @@ moved_tile:
 
     ; add 2 to tail index, mod buflen
     lw snk@tail_index r1 r2
+    lw snk@tiles_queue_addr r1 r3
+    add r2 r3 r3
+
+    push r1
+    push r2
+    ; free old tail tile
+    lw 0 r3 r1
+    lw 1 r3 r2
+    addi 0 r0 r3
+    jl occupy_or_free_tile
+    pop r2
+    pop r1
+
     addi 2 r2 r2
-    lw num_tiles r0 r3
+    lw snk@tiles_queue_len r1 r3
     ; if new tail index is already less than buflen, then store it back
     blt moved_tile_store_tail r2 r3
 
@@ -104,13 +117,12 @@ moved_tile_store_tail:
     ; set new head data dependent on direction of movement
     ; get old head x,y in r2,r3
     lw snk@head_index r1 r6
-    lw snk@tile_queue_addr r1 r4
+    lw snk@tiles_queue_addr r1 r4
     add r6 r4 r4
 
     ; add 2 to head index and store back (mod buflen)
     addi 2 r6 r6
-    lw num_tiles r0 r3
-    ; if new tail index is already less than buflen, then store it back
+    lw snk@tiles_queue_len r1 r3
     ; if new head index is already less than buflen, then store it back
     blt moved_tile_store_head r6 r3
 
@@ -153,12 +165,21 @@ end_move_tile:
 
     ; update buf index with new head index
     add r6 r1 r5
-    lw snk@tile_queue_addr r1 r4
+    lw snk@tiles_queue_addr r1 r4
     add r6 r4 r4
 
     ; store back new head values
     sw 0 r4 r2
     sw 1 r4 r3
+
+    push r1
+    ; occupy new head tile
+    addi 0 r2 r1
+    addi 0 r3 r2
+    addi 1 r0 r3
+
+    jl occupy_or_free_tile
+    pop r1
 
     ; reset frame count
     sw snk@move_frame_count r1 r0
@@ -205,7 +226,7 @@ reset_game:
 
     lw snk@start_x r6 r3
     lw snk@start_y r6 r4
-    lw snk@tile_queue_addr r6 r2
+    lw snk@tiles_queue_addr r6 r2
 
     ; store x,y for first tile
     sw 0 r2 r3
@@ -233,7 +254,7 @@ reset_game:
     addi 8 r0 r2
     addi 8 r0 r3
 
-    lw snk@tile_queue_addr r6 r6
+    lw snk@tiles_queue_addr r6 r6
     ; loading x
     lw 0 r6 r4
     ; loading y
@@ -255,8 +276,154 @@ reset_game:
     addi 8 r4 r4
     jl draw_rect
 
+
+    ; need to initalize tiles_grid and tiles_free
+    lw snk_addr r0 r1
+    lw snk@tiles_grid_addr r1 r2
+    lw snk@tiles_free_addr r1 r1
+
+    ; reset tiles_free_len to the max len
+    lw num_tiles r0 r3
+    sw snk@tiles_free_len r1 r3
+
+    ; tile count
+    addi 0 r0 r5
+
+tiles_init_loop:
+
+    ; add tile count to grid addr, store tile count in that location
+    add r5 r2 r6
+    sw 0 r6 r5
+    ; add tile count to free addr, store tile count in that location
+    add r5 r1 r6
+    sw 0 r6 r5
+
+    addi 1 r5 r5
+
+    ; if count < num_tiles, then loop 
+    blt tiles_init_loop r5 r3
+
     pop lr
     rts
+
+; r1: x
+; r2: y
+; return r1: index
+xy_to_tile_index:
+    ; generate tiles_grid index from x, y
+    ; right shift 3 to get tile x
+    addi -3 r0 r3
+    ssl r1 r3 r1
+
+    ; shift y val left 2 (or shift right 3 and left 5)
+    addi 2 r0 r3
+    ssl r2 r3 r2
+
+    ; or y with x
+    ; a | b == ~(~a & ~b)
+    ; tile index (i) is put in r1
+    not r1 r1
+    not r2 r2
+    and r1 r2 r1
+
+    not r1 r1
+    rts
+; r1: tile index
+; return r1: x, r2: y
+tile_index_to_xy:
+    addi 31 r0 r3
+    addi 3 r0 r4
+    addi 0 r1 r5
+
+    ; get x tile and shift left 3
+    and r5 r3 r3
+    ssl r3 r4 r1
+
+    ; shift y tile right 5 and then left 3
+    addi -5 r0 r4
+    ssl r5 r4 r5
+    addi 3 r0 r4
+    ssl r5 r4 r2
+    rts
+
+; r1: x
+; r2: y
+; r3: 1 for occupy, 0 for free
+occupy_or_free_tile:
+    push lr
+
+    push r3
+    jl xy_to_tile_index
+    pop r6
+    
+    lw snk_addr r0 r5
+    lw snk@tiles_grid_addr r5 r4
+    lw snk@tiles_free_addr r5 r3
+
+    ; tiles_grid[i] = j is put in r2
+    add r1 r4 r2
+    lw 0 r2 r2
+
+    ; swap tiles_free[j] and tiles_free[freelen-1]
+    push r1
+    push r3
+    push r4
+    push r6
+    ; tiles_free_addr + j
+    add r3 r2 r1
+    
+    ; tiles_free_addr + freelen-1
+    lw snk@tiles_free_len r5 r5
+    beq first_free_swap r6 r0
+    addi -1 r5 r5
+first_free_swap:
+    add r3 r5 r2
+
+    jl swap_mem_vals
+    pop r6
+    pop r4
+    pop r3
+    pop r1
+
+    ; swap tiles_grid[i] and tiles_grid[tiles_free[freelen-1]]
+    ; tiles_grid_addr + i in r1
+    add r1 r4 r1
+    ; tiles_grid_addr + tiles_free[freelen-1] in r2
+    lw snk_addr r0 r5
+    lw snk@tiles_free_len r5 r2
+    beq second_free_swap r6 r0
+    addi -1 r2 r2
+second_free_swap:
+    add r3 r2 r2
+    lw 0 r2 r2
+    add r4 r2 r2
+
+    push r6
+    jl swap_mem_vals
+    pop r6
+
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r2
+    beq freelen_inc r6 r0
+    addi -1 r2 r2
+freelen_inc:
+    addi 1 r2 r2
+end_freelen_modify:
+    sw snk@tiles_free_len r1 r2
+
+    pop lr
+    rts
+
+; r1: addr 1
+; r2: addr 2
+; swaps the values at the given addresses
+swap_mem_vals:
+    lw 0 r1 r3
+    lw 0 r2 r4
+    sw 0 r1 r4
+    sw 0 r2 r3
+    rts
+
 
 inc_key_times:
 
@@ -283,7 +450,7 @@ check_collision:
     lw snk_addr r0 r1
 
     lw snk@head_index r1 r2
-    lw snk@tile_queue_addr r1 r3
+    lw snk@tiles_queue_addr r1 r3
     add r2 r3 r2
 
     lw snk@dir r1 r3
@@ -355,7 +522,7 @@ update_dir:
     ; r2 will contain the key mask
     addi 1 r0 r2
 
-    ; r3 will contain 1 to lsl with
+    ; r3 will contain 1 to ssl with
     addi 1 r0 r3
 
     addi 0 r1 r4
@@ -380,20 +547,31 @@ update_dir_go_right:
     pop r1
 
     lw 0 r6 r4
-    lw randx r0 r5
+    lw rand r0 r5
     ; add to rand value
     add r4 r5 r5
     ; reset timer
     sw 0 r6 r0
+
+    ; if tiles_free is greater than rand_val, do nothing
+    push r1
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r4
+    pop r1
+    blt dir_right_mod r5 r4
+    not r4 r4
+    addi 1 r4 r4
+    add r4 r5 r5
+dir_right_mod:
     ; store back rand val
-    sw randx r0 r5
+    sw rand r0 r5
 
     j update_dir_end
 dir_check_up:
     ; put keys value in r4
     addi 0 r1 r4
     ; shift the mask
-    lsl r2 r3 r2
+    ssl r2 r3 r2
     ; and with the mask
     and r2 r4 r4
     ; if keys & mask is 0, then check the next key
@@ -410,20 +588,30 @@ dir_check_up:
     pop r1
 
     lw 1 r6 r4
-    lw randy r0 r5
+    lw rand r0 r5
     ; add to rand value
     add r4 r5 r5
     ; reset timer
     sw 1 r6 r0
+    ; if tiles_free is greater than rand_val, do nothing
+    push r1
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r4
+    pop r1
+    blt dir_up_mod r5 r4
+    not r4 r4
+    addi 1 r4 r4
+    add r4 r5 r5
+dir_up_mod:
     ; store back rand val
-    sw randy r0 r5
+    sw rand r0 r5
 
     j update_dir_end
 dir_check_left:
     ; put keys value in r4
     addi 0 r1 r4
     ; shift the mask
-    lsl r2 r3 r2
+    ssl r2 r3 r2
     ; and with the mask
     and r2 r4 r4
     ; if keys & mask is 0, then check the next key
@@ -432,7 +620,11 @@ dir_check_left:
     lw snk_addr r0 r4
     lw snk@dir r4 r4
     addi 0 r0 r5
-    beq update_dir_end r4 r5
+    beq dir_end_jump r4 r5
+    j end_dir_end_jump
+dir_end_jump:
+    j update_dir_end
+end_dir_end_jump:
     ; else load 10 into snk_dir
     push r1
     lw snk_addr r0 r1
@@ -441,20 +633,30 @@ dir_check_left:
     pop r1
 
     lw 2 r6 r4
-    lw randx r0 r5
+    lw rand r0 r5
     ; add to rand value
     add r4 r5 r5
     ; reset timer
     sw 2 r6 r0
+    ; if tiles_free is greater than rand_val, do nothing
+    push r1
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r4
+    pop r1
+    blt dir_left_mod r5 r4
+    not r4 r4
+    addi 1 r4 r4
+    add r4 r5 r5
+dir_left_mod:
     ; store back rand val
-    sw randx r0 r5
+    sw rand r0 r5
 
     j update_dir_end
 dir_check_down:
     ; put keys value in r4
     addi 0 r1 r4
     ; shift the mask
-    lsl r2 r3 r2
+    ssl r2 r3 r2
     ; and with the mask
     and r2 r4 r4
     ; if keys & mask is 0, then no key is pressed
@@ -472,61 +674,25 @@ dir_check_down:
     pop r1
 
     lw 3 r6 r4
-    lw randy r0 r5
+    lw rand r0 r5
     ; add to rand value
     add r4 r5 r5
     ; reset timer
     sw 3 r6 r0
+    ; if tiles_free is greater than rand_val, do nothing
+    push r1
+    lw snk_addr r0 r1
+    lw snk@tiles_free_len r1 r4
+    pop r1
+    blt dir_down_mod r5 r4
+    not r4 r4
+    addi 1 r4 r4
+    add r4 r5 r5
+dir_down_mod:
     ; store back rand val
-    sw randy r0 r5
+    sw rand r0 r5
 update_dir_end:
     rts
-
-; gen_food_coord:
-;     lw randx r0 r1
-;     lw screen_width r0 r4
-;     addi -20 r0 r3 
-;     ; 620
-;     add r3 r4 r4
-;     ; 600
-;     add r3 r4 r4
-
-;     ; copy to r3 and negate it
-;     add r4 r0 r3
-;     not r3 r3
-;     addi 1 r3 r3
-
-;     ; subtract 600 until it's less than 600
-; x_mod_loop:
-;     blt x_generated r1 r4
-;     add r1 r3 r1
-;     j x_mod_loop
-
-; x_generated:
-;     ; x val in r1, y val in r2
-;     addi 20 r1 r1
-
-;     lw randy r0 r2
-;     lw screen_height r0 r4
-;     addi -15 r0 r3 
-;     add r3 r4 r4
-;     add r3 r4 r4
-
-;     ; copy to r3 and negate it
-;     add r4 r0 r3
-;     not r3 r3
-;     addi 1 r3 r3
-
-;     ; subtract 600 until it's less than 600
-; y_mod_loop:
-;     blt y_generated r2 r4
-;     add r2 r3 r2
-;     j y_mod_loop
-
-; y_generated:
-
-;     addi 15 r2 r2
-;     rts
 
 move_snake:
     push lr
@@ -550,7 +716,7 @@ move_snake:
     j move_head_down
 move_head_right:
     lw snk@head_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; y 
@@ -570,7 +736,7 @@ move_head_up:
     lw snk@move_frame_count r6 r2
 
     lw snk@head_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; height = frame cnt + 1
@@ -602,7 +768,7 @@ move_head_left:
     lw snk@move_frame_count r6 r3
 
     lw snk@head_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; width = frame cnt + 1
@@ -630,7 +796,7 @@ move_head_left:
     j moved_head
 move_head_down:
     lw snk@head_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; y 
@@ -652,7 +818,7 @@ moved_head:
     lw snk_addr r0 r6
 
     lw snk@tail_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; load x of tail into r2
@@ -683,7 +849,7 @@ move_tail_horizontal:
 
 move_tail_right:
     lw snk@tail_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; y 
@@ -702,7 +868,7 @@ move_tail_up:
     lw snk@move_frame_count r6 r2
 
     lw snk@tail_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; height = frame cnt + 1
@@ -734,7 +900,7 @@ move_tail_left:
     lw snk@move_frame_count r6 r3
 
     lw snk@tail_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; width = frame cnt + 1
@@ -762,7 +928,7 @@ move_tail_left:
     j moved_tail
 move_tail_down:
     lw snk@tail_index r6 r5
-    lw snk@tile_queue_addr r6 r4
+    lw snk@tiles_queue_addr r6 r4
     add r4 r5 r4
 
     ; y 
@@ -913,7 +1079,13 @@ snk@tail_index:
     .word 0000
 snk@head_index:
     .word 0000
-snk@tile_queue_addr:
+snk@tiles_queue_len:
+    .word 0600
+snk@tiles_queue_addr:
     .word 2000
-snk@tile_grid_addr:
+snk@tiles_grid_addr:
     .word 3000
+snk@tiles_free_len:
+    .word 0300
+snk@tiles_free_addr:
+    .word 4000

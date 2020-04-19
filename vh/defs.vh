@@ -15,7 +15,7 @@
 `define OP_WIDTH 4
 
 `define OP_ADD 4'h0
-`define OP_LSL 4'h1
+`define OP_SSL 4'h1
 `define OP_AND 4'h2
 `define OP_NOT 4'h3
 
@@ -34,7 +34,7 @@
 `define OP_NOP 4'hF
 
 `define ALU_OP_ADD 'h0
-`define ALU_OP_LSL 'h1
+`define ALU_OP_SSL 'h1
 `define ALU_OP_AND 'h2
 `define ALU_OP_NOT 'h3
 
