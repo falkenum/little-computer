@@ -3,7 +3,6 @@ snk_addr:
     .word snk
 key_times_addr:
     .word key_times
-; these are random numbers generated based on the time between key presses
 rand:
     .word 0000
 foodx:
@@ -40,8 +39,14 @@ tx_count:
     .word 0000
 zero_char:
     .string "0"
-msg:
-    .string "hello world\n"
+alpha_char:
+    .string "A"
+newline_char:
+    .string "\n"
+failed_msg_addr:
+    .word failed_msg
+begin_msg_addr:
+    .word begin_msg
 start:
     ; drawing the frame
     lw colors_addr r0 r1
@@ -212,6 +217,33 @@ reset_game:
     lw bg_y r0 r5
     jl draw_rect
 
+    ; need to initalize tiles_grid and tiles_free
+    lw snk_addr r0 r1
+    lw snk@tiles_grid_addr r1 r2
+    lw snk@tiles_free_addr r1 r1
+
+    ; reset tiles_free_len to the max len
+    lw num_tiles r0 r3
+    sw snk@tiles_free_len r1 r3
+
+    ; tile count
+    addi 0 r0 r5
+
+tiles_init_loop:
+
+    ; add tile count to grid addr, store tile count in that location
+    add r5 r2 r6
+    sw 0 r6 r5
+    ; add tile count to free addr, store tile count in that location
+    add r5 r1 r6
+    sw 0 r6 r5
+
+    addi 1 r5 r5
+
+    ; if count < num_tiles, then loop 
+    blt tiles_init_loop r5 r3
+
+    jl run_tests
 
     ; initalizing snake
     lw snk_addr r0 r6
@@ -232,16 +264,48 @@ reset_game:
     sw 0 r2 r3
     sw 1 r2 r4
 
+    push r2
+    push r3
+    push r4
+    push r6
+    addi 0 r3 r1
+    addi 0 r4 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+    pop r6
+    pop r4
+    pop r3
+    pop r2
 
     ; store x,y for second tile
     addi 8 r3 r3
     sw 2 r2 r3
     sw 3 r2 r4
 
+    push r2
+    push r3
+    push r4
+    push r6
+    addi 0 r3 r1
+    addi 0 r4 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+    pop r6
+    pop r4
+    pop r3
+    pop r2
+
     ; store x,y for third tile
     addi 8 r3 r3
     sw 4 r2 r3
     sw 5 r2 r4
+
+    push r6
+    addi 0 r3 r1
+    addi 0 r4 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+    pop r6
 
     ; store 0 for dir and next_dir
     sw snk@dir r6 r0
@@ -276,35 +340,61 @@ reset_game:
     addi 8 r4 r4
     jl draw_rect
 
-
-    ; need to initalize tiles_grid and tiles_free
-    lw snk_addr r0 r1
-    lw snk@tiles_grid_addr r1 r2
-    lw snk@tiles_free_addr r1 r1
-
-    ; reset tiles_free_len to the max len
-    lw num_tiles r0 r3
-    sw snk@tiles_free_len r1 r3
-
-    ; tile count
-    addi 0 r0 r5
-
-tiles_init_loop:
-
-    ; add tile count to grid addr, store tile count in that location
-    add r5 r2 r6
-    sw 0 r6 r5
-    ; add tile count to free addr, store tile count in that location
-    add r5 r1 r6
-    sw 0 r6 r5
-
-    addi 1 r5 r5
-
-    ; if count < num_tiles, then loop 
-    blt tiles_init_loop r5 r3
-
     pop lr
     rts
+
+run_tests:
+    push lr
+    lw begin_msg_addr r0 r1
+    jl print
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r3
+    lw 0 r3 r1
+    addi 0 r0 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw num_tiles r0 r1
+    addi -1 r1 r1
+    lw snk@tiles_grid_addr r6 r2
+    add r2 r1 r2
+    lw 0 r2 r2
+    jl assert_eq
+
+    addi 1 r0 r1
+    addi 0 r0 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+
+    ; tiles grid[1] == num tiles - 1
+    ; tiles grid[numtiles-1] == 1
+    ; tiles free[1] == num tiles - 1
+    ; tiles free[numtiles-1] == 1
+
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    addi 1 r5 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    jl assert_eq
+
+    halt
+    pop lr
+    rts
+
+; r1, r2
+assert_eq:
+    push lr
+    beq assert_end r1 r2
+assert_failed:
+    lw failed_msg_addr r0 r1
+    jl print
+assert_end:
+    pop lr
+    rts
+
 
 ; r1: x
 ; r2: y
@@ -365,51 +455,51 @@ occupy_or_free_tile:
     lw 0 r2 r2
 
     ; swap tiles_free[j] and tiles_free[freelen-1]
-    push r1
-    push r3
-    push r4
-    push r6
+    ; push r1
+    ; push r3
+    ; push r4
+    ; push r6
     ; tiles_free_addr + j
     add r3 r2 r1
     
     ; tiles_free_addr + freelen-1
     lw snk@tiles_free_len r5 r5
-    beq first_free_swap r6 r0
+    ; beq first_free_swap r6 r0
     addi -1 r5 r5
-first_free_swap:
+; first_free_swap:
     add r3 r5 r2
 
     jl swap_mem_vals
-    pop r6
-    pop r4
-    pop r3
-    pop r1
+    ; pop r6
+    ; pop r4
+    ; pop r3
+    ; pop r1
 
-    ; swap tiles_grid[i] and tiles_grid[tiles_free[freelen-1]]
-    ; tiles_grid_addr + i in r1
-    add r1 r4 r1
-    ; tiles_grid_addr + tiles_free[freelen-1] in r2
-    lw snk_addr r0 r5
-    lw snk@tiles_free_len r5 r2
-    beq second_free_swap r6 r0
-    addi -1 r2 r2
-second_free_swap:
-    add r3 r2 r2
-    lw 0 r2 r2
-    add r4 r2 r2
+;     ; swap tiles_grid[i] and tiles_grid[tiles_free[freelen-1]]
+;     ; tiles_grid_addr + i in r1
+;     add r1 r4 r1
+;     ; tiles_grid_addr + tiles_free[freelen-1] in r2
+;     lw snk_addr r0 r5
+;     lw snk@tiles_free_len r5 r2
+;     beq second_free_swap r6 r0
+;     addi -1 r2 r2
+; second_free_swap:
+;     add r3 r2 r2
+;     lw 0 r2 r2
+;     add r4 r2 r2
 
-    push r6
-    jl swap_mem_vals
-    pop r6
+;     push r6
+;     jl swap_mem_vals
+;     pop r6
 
-    lw snk_addr r0 r1
-    lw snk@tiles_free_len r1 r2
-    beq freelen_inc r6 r0
-    addi -1 r2 r2
-freelen_inc:
-    addi 1 r2 r2
-end_freelen_modify:
-    sw snk@tiles_free_len r1 r2
+    ; lw snk_addr r0 r1
+    ; lw snk@tiles_free_len r1 r2
+;     beq freelen_inc r6 r0
+;     addi -1 r2 r2
+; freelen_inc:
+;     addi 1 r2 r2
+; end_freelen_modify:
+;     sw snk@tiles_free_len r1 r2
 
     pop lr
     rts
@@ -1001,10 +1091,9 @@ draw_rect_end:
     pop r4
     rts
 
-print:
-    ; load msg addr into r1
-    addi msg r0 r1
 
+; r1: char
+putc:
     ; load tx_addr into r2
     lw tx_addr r0 r2
 
@@ -1013,16 +1102,8 @@ print:
 
     ; load 1 into r4, for comparison
     addi 1 r0 r4
-
-strloop:
-    ; load char into r3
-    lw 0 r1 r3
-
-    ; if null char, go to the end
-    beq print_end r0 r3
-
     ; store char at tx_addr
-    sw 0 r2 r3
+    sw 0 r2 r1
 
     ; we need to wait until txrdy goes low and then high again
 
@@ -1038,11 +1119,64 @@ txrdy_is_low:
     j txrdy_is_low
 
 txrdy_is_high:
-    ; inc char ptr
+    rts
+
+; r1: str ptr
+print:
+    push lr
+strloop:
+    push r1
+    ; load char into r1
+    lw 0 r1 r1
+
+    ; if null char, go to the end
+    beq print_end r0 r1
+    jl putc
+    
+    pop r1
+    ; inc str ptr
     addi 1 r1 r1
     j strloop
 
 print_end:
+    pop r1
+    pop lr
+    rts
+
+; r1: value to print
+print_hex_val:
+    push lr
+    addi 0 r1 r6
+    addi -12 r0 r5
+print_hex_loop:
+    addi 15 r0 r3
+    ssl r6 r5 r2
+    and r2 r3 r3
+    addi 10 r0 r4
+    blt offset_by_zero r3 r4
+    addi -10 r3 r3
+    lw alpha_char r0 r4
+    j end_offset
+offset_by_zero:
+    lw zero_char r0 r4
+end_offset:
+    add r3 r4 r1
+
+    push r5
+    push r6
+    jl putc
+    pop r6
+    pop r5
+
+    beq print_hex_loop_end r5 r0
+    addi 4 r5 r5
+    j print_hex_loop
+
+print_hex_loop_end:
+    lw newline_char r0 r1
+    jl putc
+
+    pop lr
     rts
 
 colors:
@@ -1089,3 +1223,7 @@ snk@tiles_free_len:
     .word 0300
 snk@tiles_free_addr:
     .word 4000
+failed_msg:
+    .string "failed\n"
+begin_msg:
+    .string "begin\n"
