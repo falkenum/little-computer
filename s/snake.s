@@ -183,8 +183,14 @@ end_move_tile:
 
     jl check_collision
     addi 1 r0 r2
-    ; if r1 == 0, then go to main. else restart game
+    ; if r1 == 0, then go to main.
     blt main r1 r2
+    ; if r1 == 1, reset game.
+    beq collision_reset r1 r2
+    ; else r1 == 2, food was eaten.
+    sw food_eaten r0 r2
+    j main
+collision_reset:
     jl reset_game
 main:
     lw vga_vblank_addr r0 r1
@@ -643,6 +649,18 @@ check_collision:
     lw snk@tiles_queue_addr r1 r3
     add r2 r3 r2
 
+    ; check if x and y equal food x and y
+    lw 0 r2 r3
+    lw 1 r2 r4
+
+    lw foodx r0 r5
+    lw foody r0 r6
+    beq food_collision_x r3 r5
+    j food_collision_end
+food_collision_x:
+    beq food_collision_found r4 r6
+food_collision_end:
+
     lw snk@dir r1 r3
 
 
@@ -692,6 +710,9 @@ check_down_collision:
     ; if collision, return 1
 collision_found:
     addi 1 r0 r1
+    j check_collision_end
+food_collision_found:
+    addi 2 r0 r1
     j check_collision_end
 collision_not_found:
     addi 0 r0 r1
