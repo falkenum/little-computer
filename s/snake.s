@@ -419,8 +419,9 @@ run_tests:
     jl assert_eq
 
     ; tile x is 1
-    addi 8 r0 r1
-    addi 0 r0 r2
+    lw bg_x r0 r1
+    addi 8 r1 r1
+    lw bg_y r0 r2
     addi 1 r0 r3
     jl occupy_or_free_tile
 
@@ -463,7 +464,110 @@ run_tests:
     addi 1 r0 r2
     jl assert_eq
 
-    ; halt
+    lw bg_x r0 r1
+    addi 16 r1 r1
+    lw bg_y r0 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+
+    lw bg_x r0 r1
+    addi 8 r1 r1
+    lw bg_y r0 r2
+    addi 0 r0 r3
+    jl occupy_or_free_tile
+
+    lw bg_x r0 r1
+    addi 0 r1 r1
+    lw bg_y r0 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+
+    lw bg_x r0 r1
+    addi 16 r1 r1
+    lw bg_y r0 r2
+    addi 0 r0 r3
+    jl occupy_or_free_tile
+
+    lw bg_x r0 r1
+    addi 8 r1 r1
+    lw bg_y r0 r2
+    addi 1 r0 r3
+    jl occupy_or_free_tile
+
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    lw 0 r5 r1
+    addi 2 r0 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    addi 1 r5 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    addi 2 r5 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -2 r2 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    addi 1 r5 r5
+    lw 0 r5 r1
+    lw num_tiles r0 r2
+    addi -2 r2 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 1 r0 r2
+    jl assert_eq
+    
+    lw snk_addr r0 r6
+    lw snk@tiles_grid_addr r6 r5
+    lw num_tiles r0 r2
+    addi -2 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 2 r0 r2
+    jl assert_eq
+
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    lw num_tiles r0 r2
+    addi -1 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 0 r0 r2
+    jl assert_eq
+    
+    lw snk_addr r0 r6
+    lw snk@tiles_free_addr r6 r5
+    lw num_tiles r0 r2
+    addi -2 r2 r2
+    add r5 r2 r5
+    lw 0 r5 r1
+    addi 1 r0 r2
+    jl assert_eq
+
+    halt
     pop lr
     rts
 
@@ -546,6 +650,9 @@ occupy_or_free_tile:
 
     push r3
     jl xy_to_tile_index
+    ; push r1
+    ; jl print_hex_val
+    ; pop r1
     pop r6
     
     lw snk_addr r0 r5
@@ -671,11 +778,41 @@ check_collision:
     beq food_collision_x r3 r5
     j food_collision_end
 food_collision_x:
-    beq food_collision_found r4 r6
+    beq food_collision_jump r4 r6
+    j food_collision_end
+food_collision_jump:
+    j food_collision_found
 food_collision_end:
 
-    lw snk@dir r1 r3
+;     ; check if x,y matches tile in snake
+;     push r1
+;     push r2
+;     addi 0 r3 r1
+;     addi 0 r4 r2
+;     jl xy_to_tile_index
+;     lw snk_addr r0 r2
+;     lw snk@tiles_grid_addr r2 r3
+;     add r1 r3 r1
+;     lw 0 r1 r4
 
+;     ; if tiles_free index is greater than its length, then the tile is occupied
+;     lw snk@tiles_free_len r2 r3
+
+;     push r3
+;     addi 0 r4 r1
+;     jl print_hex_val
+;     pop r3
+;     addi 0 r3 r1
+;     jl print_hex_val
+
+;     pop r2
+;     pop r1
+
+;     blt tile_not_occupied r4 r3
+;     j collision_found
+; tile_not_occupied:
+
+    lw snk@dir r1 r3
 
     ; check the side in the direction of motion
     beq check_right_collision r3 r0
