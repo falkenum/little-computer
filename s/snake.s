@@ -177,29 +177,33 @@ end_move_tile:
     sw 0 r4 r2
     sw 1 r4 r3
 
-    push r1
+
+    ; reset frame count
+    sw snk@move_frame_count r1 r0
+
+    push r2
+    push r3
+    addi 0 r2 r1
+    addi 0 r3 r2
+    jl check_collision
+    pop r3
+    pop r2
+    addi 1 r0 r4
+    ; if r1 == 0, then go to main.
+    blt occupy_new_tile r1 r4
+    ; if r1 == 1, reset game.
+    beq collision_reset r1 r4
+    ; else r1 == 2, food was eaten.
+    sw food_eaten r0 r4
+    lw snk_addr r0 r1
+    sw snk@expanding r1 r4
+occupy_new_tile:
     ; occupy new head tile
     addi 0 r2 r1
     addi 0 r3 r2
     addi 1 r0 r3
 
     jl occupy_or_free_tile
-    pop r1
-
-    ; reset frame count
-    sw snk@move_frame_count r1 r0
-
-    jl check_collision
-    addi 1 r0 r2
-    ; if r1 == 0, then go to main.
-    blt main r1 r2
-    ; if r1 == 1, reset game.
-    beq collision_reset r1 r2
-    ; else r1 == 2, food was eaten.
-    sw food_eaten r0 r2
-    
-    lw snk_addr r0 r1
-    sw snk@expanding r1 r2
     j main
 collision_reset:
     jl reset_game
@@ -762,57 +766,52 @@ key3_mod:
     sw 3 r2 r1
     rts
 
+
+; r1: head x
+; r2: head y
 check_collision:
-    lw snk_addr r0 r1
+    push lr
 
-    lw snk@head_index r1 r2
-    lw snk@tiles_queue_addr r1 r3
-    add r2 r3 r2
+    ; lw snk@head_index r1 r2
+    ; lw snk@tiles_queue_addr r1 r3
+    ; add r2 r3 r2
 
-    ; check if x and y equal food x and y
-    lw 0 r2 r3
-    lw 1 r2 r4
+    ; ; check if x and y equal food x and y
+    ; lw 0 r2 r3
+    ; lw 1 r2 r4
 
     lw foodx r0 r5
     lw foody r0 r6
-    beq food_collision_x r3 r5
+    beq food_collision_x r1 r5
     j food_collision_end
 food_collision_x:
-    beq food_collision_jump r4 r6
+    beq food_collision_jump r2 r6
     j food_collision_end
 food_collision_jump:
     j food_collision_found
 food_collision_end:
 
-;     ; check if x,y matches tile in snake
-;     push r1
-;     push r2
-;     addi 0 r3 r1
-;     addi 0 r4 r2
-;     jl xy_to_tile_index
-;     lw snk_addr r0 r2
-;     lw snk@tiles_grid_addr r2 r3
-;     add r1 r3 r1
-;     lw 0 r1 r4
+    ; check if x,y matches tile in snake
+    push r1
+    push r2
+    jl xy_to_tile_index
+    lw snk_addr r0 r2
+    lw snk@tiles_grid_addr r2 r3
+    add r1 r3 r1
+    lw 0 r1 r4
 
-;     ; if tiles_free index is greater than its length, then the tile is occupied
-;     lw snk@tiles_free_len r2 r3
+    ; if tiles_free index is greater than its length, then the tile is occupied
+    lw snk@tiles_free_len r2 r3
 
-;     push r3
-;     addi 0 r4 r1
-;     jl print_hex_val
-;     pop r3
-;     addi 0 r3 r1
-;     jl print_hex_val
+    pop r2
+    pop r1
 
-;     pop r2
-;     pop r1
+    blt tile_not_occupied r4 r3
+    j collision_found
+tile_not_occupied:
 
-;     blt tile_not_occupied r4 r3
-;     j collision_found
-; tile_not_occupied:
-
-    lw snk@dir r1 r3
+    lw snk_addr r0 r5
+    lw snk@dir r5 r3
 
     ; check the side in the direction of motion
     beq check_right_collision r3 r0
@@ -826,36 +825,35 @@ food_collision_end:
 check_right_collision:
     ; right side: check if head x >= bg_x + bg_width
     ; load x into r3
-    lw 0 r2 r3
+    ; lw 0 r2 r3
     ; bg_x + bg_width into r4
     lw bg_x r0 r4
     lw bg_width r0 r5
     add r4 r5 r4
-    blt collision_not_found r3 r4
+    blt collision_not_found r1 r4
     j collision_found
 check_up_collision:
     ; up side: check if head y < bg_y
-    lw 1 r2 r3
+    ; lw 1 r2 r3
     lw bg_y r0 r4
-    blt collision_found r3 r4
+    blt collision_found r2 r4
     j collision_not_found
 check_left_collision:
     ; left side: check if head x < bg_x
-    lw 0 r2 r3
+    ; lw 0 r2 r3
     lw bg_x r0 r4
-    blt collision_found r3 r4
+    blt collision_found r1 r4
     j collision_not_found
 check_down_collision:
     ; down side: check if head y >= bg_y + bg_height
     ; load x into r3
-    lw 1 r2 r3
+    ; lw 1 r2 r3
     ; bg_x + bg_width into r4
     lw bg_y r0 r4
     lw bg_height r0 r5
     add r4 r5 r4
-    blt collision_not_found r3 r4
+    blt collision_not_found r2 r4
     j collision_found
-
 
     ; if collision, return 1
 collision_found:
@@ -867,6 +865,7 @@ food_collision_found:
 collision_not_found:
     addi 0 r0 r1
 check_collision_end:
+    pop lr
     rts
 
 
