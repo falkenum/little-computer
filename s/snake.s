@@ -58,6 +58,7 @@ start:
     addi 0 r0 r4
     addi 0 r0 r5
     jl draw_rect
+    jl reset_game
 
     j main
 vblank_done:
@@ -89,6 +90,10 @@ moved_tile:
     lw snk@tiles_queue_addr r1 r3
     add r2 r3 r3
 
+    lw snk@expanding r1 r4
+    addi 1 r0 r5
+    beq reset_expanding r4 r5
+
     push r1
     push r2
     ; free old tail tile
@@ -108,6 +113,9 @@ moved_tile:
     not r3 r3
     addi 1 r3 r3
     add r2 r3 r2
+    j moved_tile_store_tail
+reset_expanding:
+    sw snk@expanding r1 r0
 moved_tile_store_tail:
     sw snk@tail_index r1 r2
 
@@ -189,6 +197,9 @@ end_move_tile:
     beq collision_reset r1 r2
     ; else r1 == 2, food was eaten.
     sw food_eaten r0 r2
+    
+    lw snk_addr r0 r1
+    sw snk@expanding r1 r2
     j main
 collision_reset:
     jl reset_game
@@ -350,6 +361,8 @@ tiles_init_loop:
     ; store 0 for dir and next_dir
     sw snk@dir r6 r0
     sw snk@next_dir r6 r0
+
+    sw snk@expanding r6 r0
 
     ; draw first tile
     lw colors_addr r0 r1
@@ -1345,6 +1358,8 @@ snk@tiles_free_len:
     .word 0300
 snk@tiles_free_addr:
     .word 4000
+snk@expanding:
+    .word 0000
 failed_msg:
     .string "failed\n"
 begin_msg:
